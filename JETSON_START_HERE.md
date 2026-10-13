@@ -19,7 +19,7 @@ sudo apt-get install -y git             # if git is missing
 tar czf ~/mirai-code-backup-$(date +%F).tgz --exclude=.venv --exclude=.python \
     --exclude=.setup-tools --exclude=models --exclude=.mirai .   # safety copy of the old code
 git init -b main
-git remote add origin https://github.com/YOUR_USER/MIRAI-Jetson.git
+git remote add origin https://github.com/Skyresist/MIRAI.git
 git config credential.helper store     # remember the read-only token
 git fetch origin
 git reset --hard origin/main            # replace the old code with the new code
