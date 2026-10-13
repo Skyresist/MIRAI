@@ -7,6 +7,25 @@ import numpy as np
 ONNX_MODEL_FILE = 'onnx/model_qint8_arm64.onnx'
 ONNX_FILES = [ONNX_MODEL_FILE, 'tokenizer.json', 'sentence_bert_config.json', '1_Pooling/config.json']
 
+# Pinned, publicly downloadable sentence encoders. e5 models were trained with these prefixes;
+# leaving them out noticeably weakens retrieval.
+EMBEDDING_MODELS = {
+    'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2': {
+        'revision': 'e8f8c211226b894fcb81acc59f3b34ba3efd5f42', 'onnx': ONNX_MODEL_FILE,
+        'query': '', 'passage': ''},
+    'intfloat/multilingual-e5-small': {
+        'revision': '614241f622f53c4eeff9890bdc4f31cfecc418b3', 'onnx': 'onnx/model_qint8_avx512_vnni.onnx',
+        'query': 'query: ', 'passage': 'passage: '},
+}
+
+
+def model_spec(model_name):
+    return EMBEDDING_MODELS.get(model_name, {'revision': None, 'onnx': ONNX_MODEL_FILE, 'query': '', 'passage': ''})
+
+
+def onnx_files(model_name):
+    return [model_spec(model_name)['onnx'], *ONNX_FILES[1:]]
+
 
 def cached_asset(repo, filename, revision):
     from huggingface_hub import hf_hub_download
@@ -21,7 +40,8 @@ class OnnxEmbedding:
         import onnxruntime as ort
         from tokenizers import Tokenizer
 
-        paths = {name: cached_asset(model_name, name, revision) for name in ONNX_FILES}
+        model_file = model_spec(model_name)['onnx']
+        paths = {name: cached_asset(model_name, name, revision) for name in onnx_files(model_name)}
         config = json.loads(Path(paths['sentence_bert_config.json']).read_text())
         pooling = json.loads(Path(paths['1_Pooling/config.json']).read_text())
         if not pooling.get('pooling_mode_mean_tokens') or any(pooling.get(key) for key in (
@@ -39,7 +59,7 @@ class OnnxEmbedding:
         options.intra_op_num_threads = 2
         options.inter_op_num_threads = 1
         options.enable_cpu_mem_arena = False
-        self.session = ort.InferenceSession(paths[ONNX_MODEL_FILE], sess_options=options,
+        self.session = ort.InferenceSession(paths[model_file], sess_options=options,
                                            providers=['CPUExecutionProvider'])
         self.inputs = {value.name for value in self.session.get_inputs()}
         if (not {'input_ids', 'attention_mask'} <= self.inputs

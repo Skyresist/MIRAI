@@ -1,9 +1,20 @@
 """Extract page-level text and provenance from a local PDF tree."""
 import logging
 from pathlib import Path
+import re
 from pypdf import PdfReader
 
 logger = logging.getLogger(__name__)
+PUNCTUATION = str.maketrans({'‘': "'", '’': "'", '“': '"', '”': '"',
+                             '‐': '-', '‑': '-', '–': '-', ' ': ' '})
+
+
+def clean_text(text: str) -> str:
+    """Make typed questions match PDF text: D’BASE == D'BASE, and unglue 'kelas.Di'."""
+    text = text.translate(PUNCTUATION)
+    text = re.sub(r'[\U0001F300-\U0001FAFF☀-➿]', '', text)  # 🔗 📍 would be read aloud
+    text = re.sub(r'(?<=[a-z)])\.(?=[A-Z0-9])', '. ', text)
+    return re.sub(r'[ \t]{2,}', ' ', text)
 
 
 def load_pdfs(folder_path) -> list[dict]:
@@ -19,7 +30,7 @@ def load_pdfs(folder_path) -> list[dict]:
             reader = PdfReader(path)
             for page_number, page in enumerate(reader.pages, start=1):
                 try:
-                    text = (page.extract_text() or '').strip()
+                    text = clean_text(page.extract_text() or '').strip()
                 except Exception as error:
                     logger.warning('Cannot extract %s page %s: %s', path.name, page_number, error)
                     continue

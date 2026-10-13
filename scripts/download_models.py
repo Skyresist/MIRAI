@@ -9,10 +9,11 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import BASE_MODEL, ROOT, Settings
 
-EMBED_REPO = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
-EMBED_REVISION = 'e8f8c211226b894fcb81acc59f3b34ba3efd5f42'
-WHISPER_REPO = 'Systran/faster-whisper-base'
-WHISPER_REVISION = 'ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66'
+WHISPER = {
+    'base': ('Systran/faster-whisper-base', 'ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66'),
+    # More accurate for Indonesian; ~2x slower on CPU and ~300 MB more RAM.
+    'small': ('Systran/faster-whisper-small', '536b0662742c02347bc0e980a01041f333bce120'),
+}
 PIPER_REPO = 'rhasspy/piper-voices'
 PIPER_REVISION = 'c10ece1aade47bb51c153c893d14e5bf8e5b7117'
 VOICE_NAMES = ['id_ID-news_tts-medium', 'en_US-lessac-medium']
@@ -42,23 +43,27 @@ def main(argv=None):
     parser.add_argument('--text-only', action='store_true')
     parser.add_argument('--onnx-only', action='store_true', help='Download only the smaller semantic-search assets.')
     parser.add_argument('--model', default=BASE_MODEL)
+    parser.add_argument('--embedding-model', default=Settings().embedding_model)
+    parser.add_argument('--whisper-model', choices=sorted(WHISPER), default='base')
     parser.add_argument('--models-dir', type=Path, default=ROOT / 'models')
     args = parser.parse_args(argv)
-    from embeddings import ONNX_FILES, cached_asset
-    for filename in ONNX_FILES:
-        cached_asset(EMBED_REPO, filename, EMBED_REVISION)
-    print('Quantized multilingual ONNX embedding model cached.', flush=True)
+    from embeddings import cached_asset, model_spec, onnx_files
+    embed_repo, embed_revision = args.embedding_model, model_spec(args.embedding_model)['revision']
+    for filename in onnx_files(embed_repo):
+        cached_asset(embed_repo, filename, embed_revision)
+    print('Quantized multilingual ONNX embedding model cached:', embed_repo, flush=True)
     if args.onnx_only:
         return
     from huggingface_hub import snapshot_download
-    snapshot_download(EMBED_REPO, revision=EMBED_REVISION,
+    snapshot_download(embed_repo, revision=embed_revision,
                       allow_patterns=['*.json', '*.safetensors', '*.txt', '*.model'], max_workers=2)
     print('Multilingual embedding model cached.', flush=True)
     if not args.text_only:
-        snapshot_download(WHISPER_REPO, revision=WHISPER_REVISION,
-                          local_dir=args.models_dir / 'whisper/base', max_workers=2,
+        repo, revision = WHISPER[args.whisper_model]
+        snapshot_download(repo, revision=revision,
+                          local_dir=args.models_dir / 'whisper' / args.whisper_model, max_workers=2,
                           allow_patterns=['config.json', 'model.bin', 'tokenizer.json', 'vocabulary.json', 'vocabulary.txt', 'preprocessor_config.json'])
-        print('faster-whisper base downloaded.', flush=True)
+        print(f'faster-whisper {args.whisper_model} downloaded.', flush=True)
         download_voices(args.models_dir / 'voices')
     if not args.skip_ollama:
         from pull_model import pull

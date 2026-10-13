@@ -10,35 +10,78 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from embeddings import model_spec
+
 logger = logging.getLogger(__name__)
 DEFAULT_MODEL = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
-DEFAULT_REVISION = 'e8f8c211226b894fcb81acc59f3b34ba3efd5f42'
+DEFAULT_REVISION = model_spec(DEFAULT_MODEL)['revision']
 
 
-def chunk_documents(documents: list[dict], size: int = 1400, overlap: int = 200) -> list[dict]:
-    """Keep FAQ blocks together, splitting long blocks without losing page labels."""
-    chunks = []
-    question = re.compile(r'^(?:Q(?:uestion)?\s*[:\-]|Pertanyaan\s*[:\-]|Apa\b|Bagaimana\b|Di mana\b|Dimana\b|Kapan\b|Siapa\b|Mengapa\b|What\b|How\b|Where\b|When\b|Who\b|Can\b)|\?$', re.I)
+QUESTION_LINE = re.compile(r'^(?:Q(?:uestion)?\s*[:\-]|Pertanyaan\s*[:\-]|Apa\b|Bagaimana\b|Di mana\b|Dimana\b|Kapan\b|Siapa\b|Mengapa\b|What\b|How\b|Where\b|When\b|Who\b|Can\b)|\?$', re.I)
+# "10 Dimana lokasi BINUS ASO? Saat ini, ..." keeps its answer on the same line.
+NUMBERED_QUESTION = re.compile(r'^\d{1,3}\s+(?P<question>[^\n]+\?)\s*(?P<rest>.*)$')
+PIECE_SIZE, PIECE_OVERLAP = 420, 100  # ~128 MiniLM tokens: longer pieces are silently truncated.
+PARENT_CHARS = 1800
+
+
+def faq_blocks(documents: list[dict]) -> list[dict]:
+    """Group text into whole question/answer blocks, carrying an answer across page breaks."""
+    blocks, current = [], None
+    previous_source = None
+    # In a numbered FAQ, only numbered lines start questions; "Apa ..." inside an answer does not.
+    numbered_sources = {document['source'] for document in documents if any(
+        NUMBERED_QUESTION.match(line.strip()) for line in document['text'].splitlines())}
     for document in documents:
-        blocks, current = [], []
+        if document['source'] != previous_source:
+            current, previous_source = None, document['source']
         for line in document['text'].splitlines():
             line = line.strip()
             if not line:
                 continue
-            if question.search(line) and current:
-                blocks.append('\n'.join(current))
-                current = []
-            current.append(line)
-        if current:
-            blocks.append('\n'.join(current))
-        for block in blocks:
-            for start in range(0, len(block), size - overlap):
-                text = block[start:start + size].strip()
-                if text:
-                    chunks.append({'text': text, 'source': document['source'], 'page': document.get('page'), 'chunk_id': len(chunks)})
-                if start + size >= len(block):
-                    break
-    return chunks
+            numbered = NUMBERED_QUESTION.match(line)
+            unnumbered = document['source'] not in numbered_sources and QUESTION_LINE.search(line)
+            if numbered or (unnumbered and (current is None or current['answer'])):
+                question = numbered['question'] if numbered else line
+                current = {'question': question.strip(), 'answer': [], 'source': document['source'],
+                           'page': document.get('page')}
+                blocks.append(current)
+                if numbered and numbered['rest']:
+                    current['answer'].append(numbered['rest'])
+            elif current is None:
+                current = {'question': '', 'answer': [line], 'source': document['source'], 'page': document.get('page')}
+                blocks.append(current)
+            else:
+                current['answer'].append(line)
+    for block in blocks:
+        block['answer'] = '\n'.join(block['answer'])
+    # Table headers such as "NO QUESTIONS ANSWERS" are not knowledge.
+    return [block for block in blocks if block['question'] or len(block['answer']) >= 40]
+
+
+def chunk_documents(documents: list[dict], size: int = PIECE_SIZE, overlap: int = PIECE_OVERLAP) -> list[dict]:
+    """Index small question-prefixed pieces; each remembers the whole Q&A it came from."""
+    pieces = []
+    for parent_id, block in enumerate(faq_blocks(documents)):
+        answer, prefix = block['answer'], (block['question'] + '\n' if block['question'] else '')
+        starts = range(0, max(len(answer), 1), size - overlap)
+        for start in starts:
+            text = (prefix + answer[start:start + size]).strip()
+            if text:
+                pieces.append({'text': text, 'source': block['source'], 'page': block['page'],
+                               'chunk_id': len(pieces), 'parent': parent_id, 'offset': start,
+                               'question': block['question'], 'answer': answer})
+            if start + size >= len(answer):
+                break
+    return pieces
+
+
+def parent_text(piece: dict, limit: int = PARENT_CHARS) -> str:
+    """Return the full Q&A, or a window around the matching piece for very long answers."""
+    answer = piece['answer']
+    if len(answer) > limit:
+        start = max(0, min(piece['offset'] - 300, len(answer) - limit))
+        answer = ('...' if start else '') + answer[start:start + limit] + ('...' if start + limit < len(answer) else '')
+    return ((piece['question'] + '\n') if piece['question'] else '') + answer
 
 
 class Retriever:
@@ -50,7 +93,8 @@ class Retriever:
             raise ValueError('The quantized ONNX embedding backend uses CPU.')
         self.chunks = chunk_documents(documents)
         self.model_name, self.backend, self.device = model_name, backend, device
-        self.model_revision = model_revision or (DEFAULT_REVISION if model_name == DEFAULT_MODEL else None)
+        self.spec = model_spec(model_name)
+        self.model_revision = model_revision or self.spec['revision']
         self.threshold, self.model, self.embeddings = threshold, None, None
         self.cache_hit = False
         self.cache_path = Path(cache_path) if cache_path else None
@@ -75,7 +119,8 @@ class Retriever:
             except (OSError, ValueError, KeyError, EOFError) as error:
                 logger.warning('Rebuilding invalid embedding cache: %s', error)
         if self.embeddings is None:
-            self.embeddings = self._model().encode(texts, convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False)
+            passages = [self.spec['passage'] + text for text in texts]
+            self.embeddings = self._model().encode(passages, convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False)
             self._save_cache()
 
     def _model(self):
@@ -116,14 +161,23 @@ class Retriever:
             return []
         lexical = cosine_similarity(self.vectorizer.transform([query]), self.lexical).ravel()
         if self.backend in ('dense', 'onnx'):
-            vector = self._model().encode([query], convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False)
+            vector = self._model().encode([self.spec['query'] + query], convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False)
             dense = cosine_similarity(vector, self.embeddings).ravel()
             scores = 0.9 * dense + 0.1 * lexical
         else:
             scores = lexical
-        order = np.argsort(-scores, kind='stable')
-        return [{**self.chunks[int(index)], 'score': float(scores[index])}
-                for index in order[:top_k] if scores[index] >= self.threshold]
+        results, parents = [], set()
+        for index in np.argsort(-scores, kind='stable'):
+            piece = self.chunks[int(index)]
+            if scores[index] < self.threshold or len(results) == top_k:
+                break
+            if piece['parent'] in parents:
+                continue  # Several pieces of one answer must not crowd out other answers.
+            parents.add(piece['parent'])
+            results.append({'text': parent_text(piece), 'source': piece['source'], 'page': piece['page'],
+                            'chunk_id': piece['parent'], 'question': piece['question'],
+                            'score': float(scores[index])})
+        return results
 
 
 class PaperRAGRetriever:
