@@ -1,7 +1,10 @@
 from unittest.mock import Mock
 
+import httpx
+import ollama
 import pytest
 
+import llm
 from assistant import Assistant
 from config import Settings
 from llm import FALLBACK, UNIVERSITY_FALLBACK, OllamaChat, complete_sentences
@@ -92,6 +95,36 @@ def test_campus_topics_missing_from_the_faq_point_to_staff():
     assert assistant.ask('Is there a dormitory?').text == UNIVERSITY_FALLBACK['en']
     assert assistant.ask('Ada asrama?').text == UNIVERSITY_FALLBACK['id']
     chat.answer.assert_not_called()
+
+
+class CrashingThenWorkingClient(RecordingClient):
+    """Ollama killed by the OOM killer, then restarted by systemd."""
+    def __init__(self, failures, error):
+        super().__init__([{'role': 'assistant', 'content': 'Halo!'}])
+        self.failures, self.error = failures, error
+
+    def chat(self, **kwargs):
+        if self.failures:
+            self.failures -= 1
+            raise self.error
+        return super().chat(**kwargs)
+
+
+@pytest.mark.parametrize('error', [httpx.ConnectError('refused'), ollama.ResponseError('model failed to load', 500)])
+def test_answer_survives_an_ollama_restart(monkeypatch, error):
+    waits = []
+    monkeypatch.setattr(llm.time, 'sleep', waits.append)
+    client = CrashingThenWorkingClient(2, error)
+    assert OllamaChat(Settings(), client).answer('Halo', '', [], 'id', social=True) == 'Halo!'
+    assert waits == list(llm.RETRY_DELAYS[:2])
+
+
+def test_bad_requests_and_long_outages_still_fail(monkeypatch):
+    monkeypatch.setattr(llm.time, 'sleep', lambda seconds: None)
+    with pytest.raises(ollama.ResponseError):
+        OllamaChat(Settings(), CrashingThenWorkingClient(1, ollama.ResponseError('model not found', 404))).answer('x', '', [])
+    with pytest.raises(httpx.ConnectError):
+        OllamaChat(Settings(), CrashingThenWorkingClient(9, httpx.ConnectError('down'))).answer('x', '', [])
 
 
 def test_emoji_are_removed_before_display_and_speech():

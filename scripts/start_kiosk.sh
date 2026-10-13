@@ -55,11 +55,15 @@ chrome="$(command -v chromium-browser || command -v chromium || command -v googl
 if [[ -n "$chrome" ]]; then
     # localhost counts as a secure origin, so the USB mic works without HTTPS. The flags
     # auto-allow the mic, allow spoken answers without an extra tap and block swipe-back.
+    # CPU and GPU share 8 GB on the Jetson, so the last flags keep the browser small enough
+    # that Ollama is not the process the OOM killer picks.
     "$chrome" --kiosk --app="$url" --user-data-dir="$HOME/.mirai-kiosk" \
         --use-fake-ui-for-media-stream --autoplay-policy=no-user-gesture-required \
         --noerrdialogs --disable-infobars --disable-translate --disable-features=Translate \
         --overscroll-history-navigation=0 --disable-pinch --disable-extensions \
-        --no-first-run --password-store=basic --check-for-update-interval=31536000 &
+        --no-first-run --password-store=basic --check-for-update-interval=31536000 \
+        --renderer-process-limit=1 --disable-background-networking --disable-component-update \
+        --disable-sync --disable-default-apps --js-flags=--max-old-space-size=128 &
 elif command -v firefox >/dev/null 2>&1; then
     echo 'Chromium not found; Firefox kiosk will ask once for microphone permission.' >&2
     firefox --kiosk "$url" &

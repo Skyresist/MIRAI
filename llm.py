@@ -1,8 +1,23 @@
 """Qwen3 chat with real Ollama tool calls, bounded rounds and visitor context."""
+import logging
 import re
+import time
 
+import httpx
 import ollama
 from config import Settings
+
+logger = logging.getLogger(__name__)
+# If the Jetson runs out of memory, Linux kills Ollama and systemd restarts it within ~5 s; the
+# model then reloads. Waiting this long lets the visitor's question survive that instead of failing.
+RETRY_DELAYS = (3, 6, 10)
+
+
+def transient(error):
+    """Ollama restarting or briefly unable to load the model, as opposed to a bad request."""
+    if isinstance(error, ollama.ResponseError):
+        return error.status_code >= 500 or error.status_code == -1
+    return isinstance(error, (ConnectionError, httpx.TransportError))
 
 FALLBACK = {
     'en': 'Sorry, I do not have knowledge of this topic.',
@@ -120,6 +135,17 @@ class OllamaChat:
         self.settings = settings
         self.client = client or ollama.Client(host=settings.ollama_host, timeout=300)
 
+    def _chat(self, **request):
+        for delay in (*RETRY_DELAYS, None):
+            try:
+                return self.client.chat(**request)
+            except Exception as error:
+                if delay is None or not transient(error):
+                    raise
+                logger.warning('Ollama unavailable (%s); retrying in %d s', error, delay)
+                time.sleep(delay)
+        raise AssertionError('unreachable: the last attempt returns or raises')
+
     def answer(self, question, context, history, language='en', tools=None, reference='', social=False):
         settings = self.settings
         tools = tools or {}
@@ -161,7 +187,7 @@ class OllamaChat:
         remaining_tool_chars = settings.context_chars
         total_calls = 0
         for round_number in range(4):
-            response = self.client.chat(
+            response = self._chat(
                 model=settings.model, messages=messages,
                 tools=list(tools.values()) if tools and round_number < 3 and total_calls < 4 and remaining_tool_chars > 0 else None,
                 think=settings.think,
