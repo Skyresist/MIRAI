@@ -42,6 +42,21 @@ class Glossary:
             r'\b(fasilitas|facilities)\b': 'fasilitas facilities laboratorium lab library canteen perpustakaan',
             r'\b(akreditasi|accreditation)\b': 'akreditasi accreditation BAN-PT Unggul',
             r'\b(jurusan|major|majors)\b': 'jurusan program studi degree engineering',
+            # The FAQ is Indonesian; give English questions the FAQ's own words to match.
+            r'\b(scholarships?|grants?)\b': 'beasiswa',
+            r'\b(tuition|fees?|costs?|how much|price)\b': 'biaya perkuliahan pembayaran',
+            r'\b(installments?|instalments?|credit card|bank loan)\b': 'cicilan bank kartu kredit',
+            r'\b(register|registration|apply|application|enrol+|admissions?)\b': 'cara mendaftar pendaftaran',
+            r'\b(entrance test|admission test|exam to enter)\b': 'TPKS Tes Potensi Keberhasilan Studi',
+            r'\b(clubs?|extracurricular|organi[sz]ations?)\b': 'UKM Unit Kegiatan Mahasiswa',
+            r'\b(located|location|address|where is (the )?campus)\b': 'lokasi kampus',
+            r'\b(lecturers?|teachers?|professors?|sensei)\b': 'dosen',
+            r'\b(graduates?|alumni|careers?|jobs?)\b': 'alumni lulusan bekerja perusahaan',
+            r'\b(midterms?|exams?)\b': 'Ujian Tengah Semester UTS Enrichment Week',
+            r'\b(language of instruction|taught in|english classes)\b': 'bahasa pengantar kuliah bahasa Inggris',
+            r'\b(class size|classes|atmosphere)\b': 'suasana kampus kelas mahasiswa',
+            r'\b(social science|ips|non-science)\b': 'jurusan IPS Sosial Humaniora',
+            r'\b(portfolio)\b': 'portofolio proyek',
         }
         additions.extend(value for pattern, value in topics.items() if re.search(pattern, normalized, re.I))
         return ' '.join([normalized, *additions])

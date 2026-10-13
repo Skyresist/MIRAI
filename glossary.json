@@ -1,12 +1,14 @@
 {
   "speech_corrections": {
     "d'binus aso": "di BINUS ASO",
-    "d’binus aso": "di BINUS ASO"
+    "d’binus aso": "di BINUS ASO",
+    "te pe ka es": "TPKS",
+    "monozukuri lab": "Monozukuri Lab"
   },
   "terms": [
     {
       "canonical": "BINUS ASO",
-      "aliases": ["binus aso", "binus asso", "bina aso", "binus a so"],
+      "aliases": ["binus aso", "binus asso", "bina aso", "binus a so", "binus-aso", "binusaso"],
       "search": "BINUS ASO School of Engineering kampus university",
       "pronunciation": {"id": "Binus Aso", "en": "Binus Aso"}
     },
@@ -18,15 +20,57 @@
     },
     {
       "canonical": "D'BASE",
-      "aliases": ["d'base", "d base", "d-base"],
-      "search": "D'BASE UKM Unit Kegiatan Mahasiswa",
+      "aliases": ["d'base", "d base", "d-base", "dbase", "dee base"],
+      "search": "D'BASE UKM Unit Kegiatan Mahasiswa mobil hemat energi Shell Eco-marathon",
       "pronunciation": {"id": "di beis", "en": "D Base"}
     },
     {
       "canonical": "AeroBASE",
       "aliases": ["aerobase", "aero base"],
-      "search": "AeroBASE UKM Unit Kegiatan Mahasiswa",
+      "search": "AeroBASE UKM Unit Kegiatan Mahasiswa drone otonom KRTI",
       "pronunciation": {"id": "Aero Beis", "en": "Aero Base"}
+    },
+    {
+      "canonical": "BASE CORE",
+      "aliases": ["base core", "basecore", "base-core"],
+      "search": "BASE CORE UKM robotika robot",
+      "pronunciation": {"id": "Beis Kor", "en": "Base Core"}
+    },
+    {
+      "canonical": "TPKS",
+      "aliases": ["tpks", "t p k s", "t.p.k.s"],
+      "search": "Tes Potensi Keberhasilan Studi TPKS tes masuk entrance test",
+      "pronunciation": {"id": "te pe ka es", "en": "T P K S"}
+    },
+    {
+      "canonical": "Widia Scholarship",
+      "aliases": ["widia scholarship", "widya scholarship", "beasiswa widia", "beasiswa widya", "widia", "widya"],
+      "search": "Widia Scholarship beasiswa full prestasi",
+      "pronunciation": {"id": "Widia Skolarsip", "en": "Widia Scholarship"}
+    },
+    {
+      "canonical": "ASO Japan Grant Scholarship",
+      "aliases": ["aso japan grant scholarship", "aso japan grant", "ajgs", "a j g s"],
+      "search": "ASO Japan Grant Scholarship AJGS beasiswa Development Fee Fixed Tuition Fee",
+      "pronunciation": {"id": "Aso Japan Gran Skolarsip", "en": "ASO Japan Grant Scholarship"}
+    },
+    {
+      "canonical": "ASO College",
+      "aliases": ["aso college", "aso college group", "aso kolej"],
+      "search": "ASO College Group Fukuoka Jepang Japan",
+      "pronunciation": {"id": "Aso Kolej", "en": "ASO College"}
+    },
+    {
+      "canonical": "Alam Sutera",
+      "aliases": ["alam sutera", "alam sutra", "alam sutera tangerang"],
+      "search": "lokasi kampus Alam Sutera Tangerang location campus",
+      "pronunciation": {}
+    },
+    {
+      "canonical": "Monozukuri",
+      "aliases": ["monozukuri", "mono zukuri", "mono zukuri lab"],
+      "search": "Monozukuri Lab fasilitas laboratorium",
+      "pronunciation": {"id": "mono zukuri", "en": "mono zoo koo ree"}
     }
   ]
 }
