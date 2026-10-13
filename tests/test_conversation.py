@@ -171,6 +171,30 @@ def test_vague_continuation_is_a_followup_but_a_new_subject_is_not():
     assert conversation_query('What about the weather?', history) == ('What about the weather?', False, False)
 
 
+@pytest.mark.parametrize('reply,expected', [
+    ('BASE CORE is a robotics club [1]. Specific projects are not detailed in the evidence. [1]',
+     "BASE CORE is a robotics club [1]. I don't have more details on that yet."),
+    ('BASE CORE explores robotics [1]. The provided documents do not list projects. Want to know more?',
+     "BASE CORE explores robotics [1]. I don't have more details on that yet. Want to know more?"),
+    ('UKM untuk Business Engineering tidak disebutkan dalam dokumen [1].', None),
+    ('You must submit your competition documents and take the TPKS [1].', 'unchanged'),
+])
+def test_replies_never_narrate_evidence_or_documents(reply, expected):
+    language = 'id' if 'UKM untuk' in reply else 'en'
+    client = RecordingClient([{'role': 'assistant', 'content': reply}])
+    result = OllamaChat(Settings(), client).answer('q', '[1] x', [], language)
+    assert result == (reply if expected == 'unchanged' else expected or FALLBACK[language])
+
+
+def test_only_cited_entries_are_shown_as_sources():
+    assistant, _, chat = assistant_with([{'source': 'faq.pdf', 'page': 1, 'chunk_id': 1, 'text': 'TPKS.', 'score': 0.8},
+                                         {'source': 'faq.pdf', 'page': 2, 'chunk_id': 2, 'text': 'Kuliah.', 'score': 0.7}])
+    chat.answer.return_value = 'Yes, I remember what we talked about in this visit.'
+    assert assistant.ask('you have memory capabilities in you?').sources == []
+    chat.answer.return_value = 'Kuliahnya pakai bahasa Inggris [2].'
+    assert [hit['text'] for hit in assistant.ask('Kuliah pakai bahasa apa?').sources] == ['Kuliah.']
+
+
 def test_emoji_are_removed_before_display_and_speech():
     client = RecordingClient([{'role': 'assistant', 'content': 'Halo! Ada yang bisa aku bantu? 😊'}])
     assert OllamaChat(Settings(), client).answer('Halo', '', [], 'id', social=True) == 'Halo! Ada yang bisa aku bantu?'

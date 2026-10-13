@@ -67,7 +67,8 @@ function renderSuggestions() {
 function addMessage(role, text, { sources = [], error = false } = {}) {
   const item = document.createElement('li');
   item.className = `message ${role}${error ? ' error' : ''}`;
-  item.textContent = text;
+  // "[1]" markers mean nothing to a visitor; the Source line below already says where it came from.
+  item.textContent = text.replace(/\s*\[\d+\]/g, '');
   if (sources.length) {
     const note = document.createElement('div');
     note.className = 'sources';

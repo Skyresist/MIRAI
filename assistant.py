@@ -240,4 +240,8 @@ class Assistant:
         self.memory.append(question, text)
         if text.strip() in (FALLBACK[language], UNIVERSITY_FALLBACK[language], CLARIFY_TOPIC[language]):
             cited = []
+        # Show only entries the reply cites: small talk answered beside unrelated evidence
+        # ("you have memory?") must not list "Source: Apa itu TPKS".
+        numbers = {int(number) for number in re.findall(r'\[(\d+)\]', text)}
+        cited = [hit for index, hit in enumerate(cited, start=1) if index in numbers]
         return Answer(text=text, sources=cited, language=language)
