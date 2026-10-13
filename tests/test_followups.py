@@ -110,6 +110,12 @@ def test_followup_search_uses_selected_program_but_preserves_real_question():
     assistant.memory.close()
 
 
+@pytest.mark.parametrize('question', ['What programs are there?', 'Are there scholarships?', 'Is there a library?'])
+def test_existential_there_is_not_a_followup_reference(question):
+    query, _, needs_topic = conversation_query(question, [])
+    assert query == question and not needs_topic
+
+
 def test_history_enrichment_is_bounded():
     history = turns('BINUS ASO ' + 'long question ' * 500, 'Long answer ' * 500 + ' [1]')
     query, university, needs_topic = conversation_query('What facilities does it have?', history)

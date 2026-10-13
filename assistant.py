@@ -58,6 +58,23 @@ ELLIPSIS = re.compile(
     r'^(and|what about|how about|bagaimana dengan|kalau|lalu|terus)\b', re.I)
 SHORT_FOLLOWUP = re.compile(
     r'^(how much|how long|where|when|berapa|berapa lama|di mana|dimana|kapan)[?!. ]*$', re.I)
+# Small talk is recognised positively. Anything not clearly social and without FAQ evidence still
+# gets the fixed apology, so a missed pattern can only make MIRAI too polite, never make up a fact.
+SOCIAL = re.compile(
+    r"^\W*(?:(?:hi|hello|hey|halo|hai|hallo|pagi|siang|sore|malam|selamat \w+|good (?:morning|afternoon|evening)|"
+    r"assalamu'?alaikum|permisi)\b[\w\s,!.']*$|"
+    r".*\b(?:how are you|how(?:'s| is) it going|how do you do|what'?s up|apa kabar|gimana kabar|kabarmu|"
+    r"thank(?:s| you)|makasih|terima ?kasih|thx|"
+    r"bye|goodbye|see you|sampai jumpa|dadah|daah|"
+    r"nice to meet you|senang bertemu|salam kenal|"
+    r"are you (?:a robot|human|real|an ai|smart|okay|ok|happy|tired|bored)|kamu (?:robot|manusia|pintar|lucu|keren)|"
+    r"(?:do|can) you (?:like|love|eat|sleep|dance|sing|feel|dream)|kamu (?:suka|bisa (?:makan|tidur|nyanyi|menari))|"
+    r"your fav(?:ou?rite)?|favoritmu|kesukaanmu|how old are you|umur(?:mu| kamu)|"
+    r"tell me a joke|lelucon|joke|cerita lucu|"
+    r"you(?:'re| are) (?:cute|cool|smart|great|awesome|funny|helpful)|"
+    r"i(?:'m| am) (?:nervous|confused|worried|scared|excited|happy|sad|tired|bored|lost)|"
+    r"(?:aku|saya) (?:bingung|takut|gugup|deg-?degan|senang|seneng|sedih|capek|lelah|bosan|khawatir|excited)|"
+    r"good job|great job|well done|keren|mantap|lucu banget)\b.*$)", re.I | re.S)
 CLARIFY_TOPIC = {
     'en': 'Which topic or program do you mean?',
     'id': 'Topik atau program mana yang Anda maksud?',
@@ -74,6 +91,8 @@ def conversation_query(question, history):
     # "Apa itu mekanika kuantum?" defines a new topic; its "itu" is not a
     # reference to the previous answer. Bare "Apa itu?" still needs a topic.
     reference_text = re.sub(r'^apa\s+itu\s+(?=\w)', '', question, flags=re.I)
+    # "Are there scholarships?" / "What programs are there?": existential "there" points nowhere.
+    reference_text = re.sub(r'\b(?:is|are|was|were) there\b|\bthere (?:is|are|was|were)\b', '', reference_text, flags=re.I)
     followup = bool(REFERENCES.search(reference_text) or SHORT_FOLLOWUP.fullmatch(question)
                     or (ELLIPSIS.search(question) and RELATED_TERMS.search(question)))
     if not followup:
@@ -121,7 +140,10 @@ class Assistant:
                 reserved = sum(len(turn['content']) for turn in name_turn)
                 history = name_turn + self.memory.recent(
                     self.settings.history_turns, self.settings.history_chars - reserved)
-        query, university, needs_topic = conversation_query(question, history)
+        social = (bool(SOCIAL.match(question)) and not is_memory_request(question)
+                  and not UNIVERSITY_TERMS.search(question) and not RELATED_TERMS.search(question))
+        # "How's it going?" contains "it" but is not a follow-up about the previous program.
+        query, university, needs_topic = (question, False, False) if social else conversation_query(question, history)
         fallback = UNIVERSITY_FALLBACK[language] if university else FALLBACK[language]
         sources = []
 
@@ -144,7 +166,8 @@ class Assistant:
                 return json.dumps({'error': 'query must contain 1 to 200 characters'})
             return json.dumps(self.memory.search(query), ensure_ascii=False)
 
-        context = '' if is_memory_request(question) or needs_topic else search_documents(query[:2000])
+        skip_search = social or needs_topic or is_memory_request(question)
+        context = '' if skip_search else search_documents(query[:2000])
         memory_or_chat = re.search(
             r'\b(hello|hi|halo|hai|thanks|thank|terima kasih|remember|recall|ingat|tadi|earlier)\b|'
             r'\b(my name|nama saya|nama aku|what did|apa yang (saya|aku)|you said|i am|saya (bernama|suka))\b',
@@ -152,13 +175,19 @@ class Assistant:
         )
         if needs_topic:
             text = CLARIFY_TOPIC[language]
-        elif not sources and not (memory_or_chat or is_memory_request(question)):
+        elif not sources and not (social or SOCIAL.match(question) or memory_or_chat or is_memory_request(question)):
             text = fallback
         else:
-            reference = {'reference': query[len(question):].strip()} if query != question else {}
-            text = self.chat.answer(question, context, history, language,
-                                    {'search_documents': search_documents, 'recall_memory': recall_memory},
-                                    **reference)
+            tools = {'search_documents': search_documents, 'recall_memory': recall_memory}
+            # "I'm nervous about university" mentions a campus word but is still a feeling;
+            # without evidence it gets the fact-free social reply rather than a cold apology.
+            if social or (not sources and SOCIAL.match(question) and not is_memory_request(question)):
+                text = self.chat.answer(question, context, history, language, tools, social=True)
+            elif query != question:
+                text = self.chat.answer(question, context, history, language, tools,
+                                        reference=query[len(question):].strip())
+            else:
+                text = self.chat.answer(question, context, history, language, tools)
         if text.strip() in (FALLBACK[language], UNIVERSITY_FALLBACK[language]):
             text = fallback
         self.memory.append(question, text)

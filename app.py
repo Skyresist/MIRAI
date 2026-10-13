@@ -6,6 +6,7 @@ import sys
 
 from assistant import Assistant, build_context
 from config import Settings
+from embeddings import EMBEDDING_MODELS
 from glossary import Glossary
 from retriever import PaperRAGRetriever, Retriever
 from secret import patch_response
@@ -34,10 +35,12 @@ def parser():
                         help='Use quantized semantic PDF search, a smaller context and shorter replies for an 8 GB Jetson.')
     result.add_argument('--embedding-backend', choices=['dense', 'onnx', 'tfidf'],
                         help='Default dense; low-memory mode uses quantized ONNX semantic search.')
+    result.add_argument('--embedding-model', choices=sorted(EMBEDDING_MODELS), default=defaults.embedding_model,
+                        help='Sentence encoder for PDF search (compare with scripts/eval_retrieval.py).')
     result.add_argument('--embedding-device', choices=['cpu', 'cuda'], default='cpu')
     result.add_argument('--top-k', type=positive, help='PDF matches; default 4, or 2 in low-memory mode.')
     result.add_argument('--threshold', type=float, default=0.25)
-    result.add_argument('--max-tokens', type=positive, help='Reply tokens; default 192, or 128 in low-memory mode.')
+    result.add_argument('--max-tokens', type=positive, help='Reply tokens; default 192, or 160 in low-memory mode.')
     result.add_argument('--num-ctx', type=positive,
                         help='Ollama context tokens; default 4096, or 2048 in low-memory mode.')
     result.add_argument('--think', action=argparse.BooleanOptionalAction, default=False)
@@ -67,13 +70,24 @@ def main(argv=None):
     if arguments.low_memory and arguments.embedding_backend == 'dense':
         parser().error('--low-memory uses ONNX semantic search; omit --embedding-backend dense')
     logging.basicConfig(level=logging.INFO if arguments.verbose else logging.WARNING, format='%(levelname)s: %(message)s')
+    settings = build_settings(arguments)
+    glossary = Glossary(settings.glossary_path)
+    retriever = build_retriever(settings, arguments.paperrag_index)
+    with VisitorSession(arguments.idle_timeout, settings.session) as visitor:
+        assistant = Assistant(settings, retriever, glossary=glossary, memory=visitor.memory)
+        return run_chat(arguments, settings, retriever, assistant, glossary, visitor)
+
+
+def build_settings(arguments):
+    """Shared by the terminal CLI and the touchscreen server."""
     defaults = Settings()
     settings = Settings(
         model=arguments.model, pdf_dir=arguments.pdf_dir, state_dir=arguments.state_dir,
         session=arguments.session, embedding_backend=arguments.embedding_backend or ('onnx' if arguments.low_memory else 'dense'),
+        embedding_model=arguments.embedding_model,
         embedding_device=arguments.embedding_device, score_threshold=arguments.threshold,
         top_k=arguments.top_k or (2 if arguments.low_memory else defaults.top_k),
-        max_tokens=arguments.max_tokens or (128 if arguments.low_memory else defaults.max_tokens),
+        max_tokens=arguments.max_tokens or (160 if arguments.low_memory else defaults.max_tokens),
         num_ctx=arguments.num_ctx or (2048 if arguments.low_memory else defaults.num_ctx), think=arguments.think,
         glossary_path=arguments.glossary, whisper_model=arguments.whisper_model,
         speech_device=arguments.speech_device, voices_dir=arguments.voices_dir,
@@ -84,18 +98,20 @@ def main(argv=None):
         settings.context_chars = 2200
         print(f'Low-memory mode: {settings.embedding_backend} PDF search, smaller recent-memory and evidence windows. '
               'Conversation memory lasts only for this visit.', file=sys.stderr)
-    glossary = Glossary(settings.glossary_path)
-    retriever = (PaperRAGRetriever(arguments.paperrag_index, threshold=settings.score_threshold)
-                 if arguments.paperrag_index else Retriever(
+    return settings
+
+
+def build_retriever(settings, paperrag_index=None):
+    cache_name = settings.embedding_model.rsplit('/', 1)[-1]
+    retriever = (PaperRAGRetriever(paperrag_index, threshold=settings.score_threshold)
+                 if paperrag_index else Retriever(
                      load_pdfs(settings.pdf_dir), cache_path=settings.state_dir / (
-                         'embeddings-onnx.npz' if settings.embedding_backend == 'onnx' else 'embeddings.npz'),
+                         f'embeddings-onnx-{cache_name}.npz' if settings.embedding_backend == 'onnx' else f'embeddings-{cache_name}.npz'),
                      model_name=settings.embedding_model, backend=settings.embedding_backend,
                      device=settings.embedding_device, threshold=settings.score_threshold))
     if not retriever.has_data():
         print(f'No PDF knowledge loaded. Add university PDFs to {settings.pdf_dir}.', file=sys.stderr)
-    with VisitorSession(arguments.idle_timeout, settings.session) as visitor:
-        assistant = Assistant(settings, retriever, glossary=glossary, memory=visitor.memory)
-        return run_chat(arguments, settings, retriever, assistant, glossary, visitor)
+    return retriever
 
 
 def run_chat(arguments, settings, retriever, assistant, glossary, visitor):

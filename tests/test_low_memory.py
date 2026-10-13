@@ -43,7 +43,7 @@ def test_low_memory_pdf_ignores_previous_visitors_without_heavy_imports(tmp_path
     output = capsys.readouterr()
     assert "D'BASE dan AeroBASE [1]." in output.out
     assert 'faq.pdf (p. 1)' in output.out
-    assert seen[0].num_ctx == 2048 and seen[0].max_tokens == 128
+    assert seen[0].num_ctx == 2048 and seen[0].max_tokens == 160
     assert seen[0].embedding_backend == 'onnx'
     assert Memory(state / 'memory.sqlite3').search('Raka')
 
