@@ -145,6 +145,9 @@ class OllamaChat:
                             '"it" or "which one". A previously listed alternative does not replace the '
                             'most recently selected program. Verify the requested new facts in the PDF evidence. '
                             'If the reference identifies several possibilities, ask which one.')
+        # The visitor can switch the screen language mid-visit; earlier turns in the other
+        # language outweigh the system prompt for a small model, so repeat it next to the question.
+        request += f'\n\nReply in {language_name}.'
         messages = [
             {'role': 'system', 'content': system},
             *history,

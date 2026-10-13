@@ -17,10 +17,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import app as cli
 from assistant import Assistant
 from glossary import Glossary
-from llm import FALLBACK, UNIVERSITY_FALLBACK, detect_language
+from llm import FALLBACK, UNIVERSITY_FALLBACK
 from memory import Memory
 
 REFUSALS = {*FALLBACK.values(), *UNIVERSITY_FALLBACK.values()}
+ENGLISH_WORDS = {'the', 'and', 'is', 'are', 'you', 'to', 'of', 'in', 'for', 'with', 'can', 'there', 'it', 'a', 'your'}
+INDONESIAN_WORDS = {'yang', 'dan', 'di', 'ada', 'untuk', 'dengan', 'kamu', 'ini', 'bisa', 'dari', 'itu', 'akan', 'juga'}
 # kind: fact (needs any/all keywords), refuse (must apologise), social (warm, fact-free), memory.
 VISITS = {
     'id-major-advice': ('id', [
@@ -50,6 +52,11 @@ VISITS = {
         ('What facilities are there?', 'fact', {'any': ['3D Print', 'Library', 'Monozukuri', 'Computer Lab', 'Physics Lab']}),
         ('Who teaches Product Design Engineering?', 'fact', {'any': ['Tak Sensei', 'Tak'], 'none': ['Saito']}),
         ('Is the class size big?', 'fact', {'any': ['28', '30', 'small']}),
+    ]),
+    # The visitor taps EN halfway through: earlier Indonesian turns must not pull the reply back.
+    'language-switch': ('id', [
+        ('Ada beasiswa apa saja?', 'fact', {'any': ['Widia', 'ASO Japan Grant']}),
+        ('EN:What student clubs are there?', 'fact', {'any': ["D'BASE", 'Kendo', 'BASE CORE']}),
     ]),
     'en-memory': ('en', [
         ('My name is Raka.', 'memory', {'any': ['Raka']}),
@@ -85,7 +92,13 @@ def check(kind, expect, text, language):
     if words > 95:
         problems.append(f'too long to speak ({words} words)')
     if not refused and len(text.split()) >= 4:
-        detected = 'id' if detect_language(text) == 'Bahasa Indonesia' else 'en'
+        # Answers quote Indonesian names ("Himpunan Mahasiswa"), so compare common function words.
+        # ...and English program names ("School of Engineering", "Automotive & Robotics").
+        prose = re.sub(r"[A-Z][\w'-]*(?:\s+(?:of|&|and|dan)?\s*[A-Z][\w'-]*)*", ' ', text)
+        tokens = re.findall(r'\w+', prose.casefold())
+        english = sum(token in ENGLISH_WORDS for token in tokens)
+        indonesian = sum(token in INDONESIAN_WORDS for token in tokens)
+        detected = 'id' if indonesian > english else 'en'
         if detected != language:
             problems.append(f'wrong language ({detected})')
     return problems
@@ -109,10 +122,13 @@ def main(argv=None):
         assistant = Assistant(settings, retriever, glossary=glossary, memory=memory)
         print(f'\n=== {name} ({language}) ===')
         for question, kind, expect in turns:
+            turn_language = language
+            if question[:3] in ('EN:', 'ID:'):  # Screen language switched for this turn.
+                turn_language, question = question[:2].lower(), question[3:]
             started = time.perf_counter()
-            answer = assistant.ask(question, language)
+            answer = assistant.ask(question, turn_language)
             latencies.append(time.perf_counter() - started)
-            problems = check(kind, expect, answer.text, language)
+            problems = check(kind, expect, answer.text, turn_language)
             total += 1
             passed += not problems
             if arguments.show or problems:
