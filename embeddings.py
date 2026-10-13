@@ -12,15 +12,24 @@ ONNX_FILES = [ONNX_MODEL_FILE, 'tokenizer.json', 'sentence_bert_config.json', '1
 EMBEDDING_MODELS = {
     'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2': {
         'revision': 'e8f8c211226b894fcb81acc59f3b34ba3efd5f42', 'onnx': ONNX_MODEL_FILE,
-        'query': '', 'passage': ''},
+        'query': '', 'passage': '', 'threshold': 0.25},
     'intfloat/multilingual-e5-small': {
         'revision': '614241f622f53c4eeff9890bdc4f31cfecc418b3', 'onnx': 'onnx/model_qint8_avx512_vnni.onnx',
-        'query': 'query: ', 'passage': 'passage: '},
+        # e5 scores sit in a narrow band: on the FAQ eval every correct hit scored >= 0.733,
+        # while 10 of 12 off-topic questions scored <= 0.717. Re-check with eval_retrieval.py.
+        'query': 'query: ', 'passage': 'passage: ', 'threshold': 0.72},
 }
+LEXICAL_THRESHOLD = 0.25  # TF-IDF character n-gram scores (--embedding-backend tfidf).
 
 
 def model_spec(model_name):
-    return EMBEDDING_MODELS.get(model_name, {'revision': None, 'onnx': ONNX_MODEL_FILE, 'query': '', 'passage': ''})
+    return EMBEDDING_MODELS.get(model_name, {'revision': None, 'onnx': ONNX_MODEL_FILE, 'query': '', 'passage': '',
+                                             'threshold': LEXICAL_THRESHOLD})
+
+
+def default_threshold(model_name, backend):
+    """Similarity scales differ per encoder, so the 'no evidence' cut-off belongs to the model."""
+    return LEXICAL_THRESHOLD if backend == 'tfidf' else model_spec(model_name)['threshold']
 
 
 def onnx_files(model_name):

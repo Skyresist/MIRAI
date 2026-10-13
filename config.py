@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 import os
 from pathlib import Path
 
+from embeddings import default_threshold
+
 ROOT = Path(__file__).resolve().parent
 BASE_MODEL = 'qwen3:4b-instruct-2507-q4_K_M'
 CHAT_MODEL = BASE_MODEL
@@ -15,11 +17,12 @@ class Settings:
     pdf_dir: Path = field(default_factory=lambda: Path(os.getenv('MIRAI_PDF_DIR', str(ROOT / 'data/pdfs'))))
     state_dir: Path = field(default_factory=lambda: Path(os.getenv('MIRAI_STATE_DIR', str(ROOT / '.mirai'))))
     glossary_path: Path = ROOT / 'glossary.json'
-    embedding_model: str = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
+    # e5-small: top-3 98% vs 89% for paraphrase-multilingual-MiniLM-L12-v2 on scripts/eval_retrieval.py.
+    embedding_model: str = 'intfloat/multilingual-e5-small'
     embedding_backend: str = 'dense'
     embedding_device: str = 'cpu'
     top_k: int = 4
-    score_threshold: float = 0.25
+    score_threshold: float | None = None  # None: the embedding model's calibrated default.
     history_turns: int = 6
     history_chars: int = 3000
     context_chars: int = 4500
@@ -31,3 +34,7 @@ class Settings:
     whisper_model: str = 'base'
     speech_device: str = 'cpu'
     voices_dir: Path = ROOT / 'models/voices'
+
+    def __post_init__(self):
+        if self.score_threshold is None:
+            self.score_threshold = default_threshold(self.embedding_model, self.embedding_backend)

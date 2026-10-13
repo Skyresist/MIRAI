@@ -39,7 +39,7 @@ def parser():
                         help='Sentence encoder for PDF search (compare with scripts/eval_retrieval.py).')
     result.add_argument('--embedding-device', choices=['cpu', 'cuda'], default='cpu')
     result.add_argument('--top-k', type=positive, help='PDF matches; default 4, or 2 in low-memory mode.')
-    result.add_argument('--threshold', type=float, default=0.25)
+    result.add_argument('--threshold', type=float, help="Minimum PDF match score; default depends on the embedding model.")
     result.add_argument('--max-tokens', type=positive, help='Reply tokens; default 192, or 160 in low-memory mode.')
     result.add_argument('--num-ctx', type=positive,
                         help='Ollama context tokens; default 4096, or 2048 in low-memory mode.')
@@ -61,7 +61,7 @@ def parser():
 
 def main(argv=None):
     arguments = parser().parse_args(argv)
-    if not 0 <= arguments.threshold <= 1:
+    if arguments.threshold is not None and not 0 <= arguments.threshold <= 1:
         parser().error('--threshold must be between 0 and 1')
     if arguments.audio and arguments.question:
         parser().error('--audio and --question cannot be combined')

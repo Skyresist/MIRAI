@@ -50,15 +50,15 @@ def main(argv=None):
     parser.add_argument('--backend', choices=['dense', 'onnx', 'tfidf'], default='onnx')
     parser.add_argument('--model', default=Settings().embedding_model)
     parser.add_argument('--top-k', type=int, default=3)
-    parser.add_argument('--threshold', type=float, default=Settings().score_threshold)
+    parser.add_argument('--threshold', type=float, help='Default: the model's calibrated threshold.')
     parser.add_argument('--verbose', '-v', action='store_true', help='Print every case, not only misses.')
     args = parser.parse_args(argv)
-    settings = Settings()
+    settings = Settings(embedding_model=args.model, embedding_backend=args.backend, score_threshold=args.threshold)
     documents = load_pdfs(settings.pdf_dir)
     questions = [block['question'] for block in faq_blocks(documents)]
     if len(questions) < 25:
         raise SystemExit(f'Expected the 25-question FAQ in {settings.pdf_dir}, found {len(questions)} blocks.')
-    retriever = Retriever(documents, backend=args.backend, threshold=args.threshold, model_name=args.model,
+    retriever = Retriever(documents, backend=args.backend, threshold=settings.score_threshold, model_name=args.model,
                           cache_path=settings.state_dir / f"eval-{args.backend}-{args.model.rsplit('/', 1)[-1]}.npz")
     glossary = Glossary(settings.glossary_path)
     top1 = topk = 0
