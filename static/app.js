@@ -150,7 +150,10 @@ async function ask(question) {
     pending.remove();
     addMessage('mirai', error.status === 409 ? t('busy') : t('offline'), { error: true });
     setBusy(false);
-    setStatus();
+    // Visitors see the friendly message; the small status line tells staff what actually failed.
+    if (error.status === 409) setStatus();
+    else setStatus(`(${error.status || 'no connection'}) ${error.message}`.slice(0, 160), true);
+    console.error('Ask failed:', error);
   } finally {
     resetIdle();
   }
