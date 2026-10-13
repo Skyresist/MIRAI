@@ -1,5 +1,48 @@
 # Start MIRAI on your new Jetson
 
+## Updating the Jetson with git (no USB)
+
+Code goes laptop → private GitHub repo → Jetson. Git never touches `.venv/`,
+`.python/`, `models/`, `.mirai/` or `data/pdfs/`, so downloads and PDFs stay put.
+
+**Once: a read-only token for the Jetson.** On GitHub: Settings → Developer
+settings → Personal access tokens → Fine-grained → *Only select repositories*
+(the MIRAI repo) → Repository permissions → *Contents: Read-only*. When git on
+the Jetson asks for a password, paste this token (not your GitHub password).
+
+**Once: turn the existing Jetson install into a git checkout** (run on the Jetson,
+e.g. over `ssh -t user@JETSON_IP`). This keeps the installed models and `.venv`:
+
+```bash
+cd ~/MIRAI-Jetson                       # the folder that already runs MIRAI
+sudo apt-get install -y git             # if git is missing
+tar czf ~/mirai-code-backup-$(date +%F).tgz --exclude=.venv --exclude=.python \
+    --exclude=.setup-tools --exclude=models --exclude=.mirai .   # safety copy of the old code
+git init -b main
+git remote add origin https://github.com/YOUR_USER/MIRAI-Jetson.git
+git config credential.helper store     # remember the read-only token
+git fetch origin
+git reset --hard origin/main            # replace the old code with the new code
+git branch --set-upstream-to=origin/main
+ls data/pdfs                            # the FAQ PDF must be here (git does not carry it)
+bash scripts/update_jetson.sh           # new packages, e5-small model, tests
+bash scripts/start_kiosk.sh
+```
+
+If `data/pdfs` is empty, copy the PDF from the laptop once:
+`scp "data/pdfs/FAQ BINUS ASO - ALT.pdf" user@JETSON_IP:~/MIRAI-Jetson/data/pdfs/`
+
+**Every later update** (after new code is pushed from the laptop):
+
+```bash
+cd ~/MIRAI-Jetson && bash scripts/update_jetson.sh && bash scripts/start_kiosk.sh
+```
+
+The update script refuses to run if files were edited directly on the Jetson,
+so nothing is overwritten silently. Make edits on the laptop and push instead.
+
+## First install from a ZIP (original instructions)
+
 1. Download the source ZIP from this chat to your laptop. Models and university
    PDFs are downloaded/added separately.
 2. Extract/copy it to the Jetson using USB or an already working SSH connection.

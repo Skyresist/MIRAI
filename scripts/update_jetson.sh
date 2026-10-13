@@ -28,11 +28,12 @@ fi
 
 .venv/bin/python -m pip install --disable-pip-version-check -q -r requirements-voice.txt -r requirements-server.txt -r requirements-dev.txt
 .venv/bin/python -m pip check
-# Only downloads what is missing; already cached models are reused.
-.venv/bin/python scripts/download_models.py --skip-ollama
-if ! ollama list | grep -q "$(.venv/bin/python -c 'from config import BASE_MODEL; print(BASE_MODEL)')"; then
-    .venv/bin/python scripts/download_models.py --onnx-only
-    .venv/bin/python scripts/pull_model.py
+# Only downloads what is missing (e.g. the ~135 MB e5-small ONNX model after the first update).
+# The kiosk uses quantised ONNX embeddings; Whisper and Piper voices came with install_jetson.sh.
+.venv/bin/python scripts/download_models.py --onnx-only
+model="$(.venv/bin/python -c 'from config import BASE_MODEL; print(BASE_MODEL)')"
+if ! ollama list | grep -q "$model"; then
+    .venv/bin/python scripts/pull_model.py --model "$model"
 fi
 .venv/bin/python -m pytest -q
 echo
