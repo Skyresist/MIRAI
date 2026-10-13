@@ -72,6 +72,28 @@ def test_social_factual_slip_is_normalised_to_the_apology():
     assert OllamaChat(Settings(), client).answer('Hi there, explain gravity', '', [], social=True) == FALLBACK['en']
 
 
+@pytest.mark.parametrize('reply', ['I do not have knowledge of the weather today.',
+                                   "Sorry, I don't have information about fixing laptops.",
+                                   'Maaf, saya tidak memiliki informasi tentang cuaca.'])
+def test_refusals_in_other_words_use_the_standard_apology(reply):
+    client = RecordingClient([{'role': 'assistant', 'content': reply}])
+    language = 'id' if reply.startswith('Maaf') else 'en'
+    assert OllamaChat(Settings(), client).answer('x', 'evidence', [], language) == FALLBACK[language]
+
+
+def test_cited_answer_that_mentions_missing_detail_is_kept():
+    reply = 'I do not have information about 2030 fees, but installments are available via BCA [1].'
+    client = RecordingClient([{'role': 'assistant', 'content': reply}])
+    assert OllamaChat(Settings(), client).answer('fees?', '[1] x', []) == reply
+
+
+def test_campus_topics_missing_from_the_faq_point_to_staff():
+    assistant, _, chat = assistant_with()
+    assert assistant.ask('Is there a dormitory?').text == UNIVERSITY_FALLBACK['en']
+    assert assistant.ask('Ada asrama?').text == UNIVERSITY_FALLBACK['id']
+    chat.answer.assert_not_called()
+
+
 def test_emoji_are_removed_before_display_and_speech():
     client = RecordingClient([{'role': 'assistant', 'content': 'Halo! Ada yang bisa aku bantu? 😊'}])
     assert OllamaChat(Settings(), client).answer('Halo', '', [], 'id', social=True) == 'Halo! Ada yang bisa aku bantu?'

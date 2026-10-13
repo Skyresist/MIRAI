@@ -24,6 +24,11 @@ def detect_language(text):
     return 'Bahasa Indonesia' if tokens & indonesian else 'English'
 
 
+REFUSAL_OPENING = re.compile(
+    r"^(?:sorry,?\s*|maaf,?\s*)?(?:i|saya|aku)\s+(?:do not|don't|cannot|can't|belum|tidak)\s+"
+    r"(?:have|memiliki|punya|tahu|know)\s+(?:any\s+)?(?:knowledge|information|informasi|pengetahuan)", re.I)
+
+
 def complete_sentences(text):
     """A reply cut by the token limit would be spoken mid-word; keep only finished sentences."""
     ends = [match.end() for match in re.finditer(r'[.!?](?:\s*\[\d+\])*(?=\s|$)', text)]
@@ -184,6 +189,10 @@ class OllamaChat:
                     expected = phrase.rstrip('.!').casefold()
                     if refusal in {expected, expected.split(', ', 1)[-1]}:
                         return FALLBACK[language]
+                # "I do not have knowledge of the weather today." is the same refusal in other words;
+                # an uncited reply that opens like this carries no facts, so use the standard wording.
+                if '[' not in text and REFUSAL_OPENING.match(text):
+                    return FALLBACK[language]
                 return text
             if round_number == 3:
                 raise RuntimeError('The model kept requesting tools after the tool-call limit.')

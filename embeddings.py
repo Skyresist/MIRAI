@@ -15,9 +15,11 @@ EMBEDDING_MODELS = {
         'query': '', 'passage': '', 'threshold': 0.25},
     'intfloat/multilingual-e5-small': {
         'revision': '614241f622f53c4eeff9890bdc4f31cfecc418b3', 'onnx': 'onnx/model_qint8_avx512_vnni.onnx',
-        # e5 scores sit in a narrow band: on the FAQ eval every correct hit scored >= 0.733,
-        # while 10 of 12 off-topic questions scored <= 0.717. Re-check with eval_retrieval.py.
-        'query': 'query: ', 'passage': 'passage: ', 'threshold': 0.72},
+        # e5 scores sit in a narrow band. Correct hits: >= 0.733 on the clean eval, >= 0.736 on messy
+        # slang/typo questions; off-topic questions mostly 0.64-0.76. Kept below 0.72 as a buffer for
+        # Whisper errors: off-topic questions that pass are still refused by the model (15/15 live).
+        # Re-check with scripts/eval_retrieval.py after editing the FAQ or the first real voice tests.
+        'query': 'query: ', 'passage': 'passage: ', 'threshold': 0.70},
 }
 LEXICAL_THRESHOLD = 0.25  # TF-IDF character n-gram scores (--embedding-backend tfidf).
 

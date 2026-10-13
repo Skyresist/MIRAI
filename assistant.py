@@ -46,7 +46,7 @@ UNIVERSITY_TERMS = re.compile(
     r"\b(binus|aso|university|universities|college|campus|tuition|admissions?|"
     r"scholarships?|accreditation|curriculum|majors?|student clubs?|study programs?|"
     r"universitas|kampus|kuliah|jurusan|mahasiswa|pendaftaran|beasiswa|akreditasi|"
-    r"kurikulum|ukm|aerobase|d'base)\b", re.I)
+    r"kurikulum|ukm|aerobase|d'base|dorm|dormitory|dormitories|asrama|parking|parkir)\b", re.I)
 RELATED_TERMS = re.compile(
     r'\b(programs?|courses?|fees?|costs?|facilities|labs?|requirements?|duration|'
     r'program|biaya|fasilitas|laboratorium|syarat|persyaratan|lama)\b', re.I)

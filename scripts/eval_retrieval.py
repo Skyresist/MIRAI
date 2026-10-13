@@ -50,7 +50,7 @@ def main(argv=None):
     parser.add_argument('--backend', choices=['dense', 'onnx', 'tfidf'], default='onnx')
     parser.add_argument('--model', default=Settings().embedding_model)
     parser.add_argument('--top-k', type=int, default=3)
-    parser.add_argument('--threshold', type=float, help='Default: the model's calibrated threshold.')
+    parser.add_argument('--threshold', type=float, help="Default: the model's calibrated threshold.")
     parser.add_argument('--verbose', '-v', action='store_true', help='Print every case, not only misses.')
     args = parser.parse_args(argv)
     settings = Settings(embedding_model=args.model, embedding_backend=args.backend, score_threshold=args.threshold)
