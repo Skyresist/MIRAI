@@ -9,7 +9,8 @@ class Memory:
         self.path = Path(path) if path is not None else None
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._volatile = sqlite3.connect(':memory:') if self.path is None else None
+        # The kiosk server answers on worker threads; it serialises all access with one lock.
+        self._volatile = sqlite3.connect(':memory:', check_same_thread=False) if self.path is None else None
         self.session = session
         with self._connect() as db, db:
             db.execute('PRAGMA journal_mode=WAL')

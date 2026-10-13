@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>MIRAI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Welcome: a visitor chooses a language, which also tells Whisper what to expect. -->
+  <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+    <div class="welcome-inner">
+      <p class="eyebrow">BINUS ASO School of Engineering</p>
+      <h1 id="welcome-title">Halo! Saya <span class="brand">MIRAI</span>.<br><span class="sub">Hi! I'm MIRAI.</span></h1>
+      <p class="lead">Pilih bahasa untuk mulai bertanya.<br><span class="sub">Choose a language to start.</span></p>
+      <div class="language-choice">
+        <button class="big-choice" data-language="id" type="button">Bahasa Indonesia</button>
+        <button class="big-choice" data-language="en" type="button">English</button>
+      </div>
+    </div>
+  </section>
+
+  <main id="chat" class="chat" hidden>
+    <header class="topbar">
+      <span class="wordmark">MIRAI</span>
+      <div class="topbar-actions">
+        <div class="segmented" role="group" aria-label="Language">
+          <button type="button" data-language="id">ID</button>
+          <button type="button" data-language="en">EN</button>
+        </div>
+        <button id="finish" class="finish" type="button" data-i18n="finish">Selesai</button>
+      </div>
+    </header>
+
+    <ol id="messages" class="messages" aria-live="polite"></ol>
+
+    <div id="suggestions" class="suggestions" aria-label="Suggested questions"></div>
+
+    <footer class="composer">
+      <div id="status" class="status" role="status"></div>
+      <div class="composer-row">
+        <form id="text-form" class="text-form" autocomplete="off">
+          <input id="text" type="text" maxlength="500" data-i18n-placeholder="placeholder" aria-label="Question">
+          <button type="submit" class="send" data-i18n="send">Kirim</button>
+        </form>
+        <button id="mic" class="mic" type="button" aria-label="Tap to talk">
+          <span class="mic-level" aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H8.5a1 1 0 1 0 0 2h7a1 1 0 1 0 0-2H13v-2.59a6 6 0 0 0 5-5.91Z"/></svg>
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <div id="idle-warning" class="idle-warning" hidden role="alertdialog" aria-live="assertive">
+    <p data-i18n="stillThere">Masih di sana? Sentuh layar untuk melanjutkan.</p>
+  </div>
+
+  <script src="recorder.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

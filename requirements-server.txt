@@ -1,0 +1,6 @@
+# Touchscreen kiosk server (server.py). Pure-Python wheels; fine on Jetson ARM64.
+fastapi==0.143.0
+uvicorn==0.54.0
+python-multipart==0.0.32
+# Used by FastAPI's TestClient in tests/test_server.py.
+httpx==0.28.1

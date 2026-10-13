@@ -36,6 +36,33 @@ existing incompatible `.venv` is preserved under `.venv-backup.*/venv` before
 creating the new environment. Keep `.python/` alongside `.venv` when moving this
 installed folder: the environment refers to that interpreter.
 
+## Touchscreen kiosk (robot screen)
+
+The robot's touchscreen runs a full-screen web page served by `server.py` on the
+Jetson itself. Visitors pick Bahasa Indonesia or English, then tap the microphone
+and speak (recording stops automatically after they finish), tap a suggested
+question, or type. Answers appear on screen and play through the Jetson's speaker.
+
+```bash
+bash scripts/start_kiosk.sh                # server + Chromium kiosk, 8 GB profile
+bash scripts/start_kiosk.sh --server-only  # then open http://127.0.0.1:8000
+```
+
+- The UI is plain HTML/JS in `static/` with no build step and no Internet assets.
+- `localhost` is a secure browser origin, so the USB microphone works without HTTPS.
+  Select the USB mic/speaker as Ubuntu's default input/output in Sound settings.
+- "Selesai/Finish" or 120 idle seconds (`--idle-timeout`) clears the visitor and
+  returns to the language screen; a warning shows 15 seconds before.
+- Qwen stays loaded (`keep_alive=-1`) and Whisper/Piper load at startup, so the
+  first visitor does not wait for model loading.
+- API: `POST /api/ask {text, language}`, `POST /api/transcribe` (multipart audio),
+  `POST /api/speak {text, language}` → WAV, `POST /api/reset`, `GET /api/status`.
+  The ROS side can use the same API later.
+
+`python scripts/eval_retrieval.py --backend onnx` checks that ~60 English and
+Indonesian visitor questions retrieve the right FAQ entry. Run it after editing
+the FAQ PDF, `glossary.json` or retrieval settings.
+
 ## Real university knowledge
 
 Put your current BINUS ASO PDFs in `data/pdfs/`, including subdirectories. The

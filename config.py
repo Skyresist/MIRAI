@@ -26,6 +26,7 @@ class Settings:
     num_ctx: int = 4096
     max_tokens: int = 192
     think: bool = False
+    keep_alive: str | int = '10m'  # The kiosk server uses -1 so the first visitor never waits for a reload.
     session: str = 'default'
     whisper_model: str = 'base'
     speech_device: str = 'cpu'

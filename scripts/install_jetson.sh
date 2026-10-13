@@ -12,7 +12,7 @@ bash scripts/prepare_python.sh
 if ! .venv/bin/python -c 'import torch' >/dev/null 2>&1; then
     .venv/bin/python -m pip install --disable-pip-version-check torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
 fi
-.venv/bin/python -m pip install --disable-pip-version-check -r requirements-voice.txt -r requirements-dev.txt
+.venv/bin/python -m pip install --disable-pip-version-check -r requirements-voice.txt -r requirements-server.txt -r requirements-dev.txt
 .venv/bin/python -m pip check
 if ! command -v ollama >/dev/null 2>&1; then
     installer="$(mktemp)"
@@ -39,4 +39,4 @@ fi
 .venv/bin/python -m pytest -q
 .venv/bin/python scripts/smoke_test.py --live --voice
 mkdir -p data/pdfs
-echo 'MIRAI installed. Add real university PDFs to data/pdfs, then run bash scripts/start.sh.'
+echo 'MIRAI installed. Add university PDFs to data/pdfs, then run: bash scripts/start_kiosk.sh'
