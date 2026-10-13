@@ -72,6 +72,20 @@ def test_social_factual_slip_is_normalised_to_the_apology():
     assert OllamaChat(Settings(), client).answer('Hi there, explain gravity', '', [], social=True) == FALLBACK['en']
 
 
+def test_emoji_are_removed_before_display_and_speech():
+    client = RecordingClient([{'role': 'assistant', 'content': 'Halo! Ada yang bisa aku bantu? 😊'}])
+    assert OllamaChat(Settings(), client).answer('Halo', '', [], 'id', social=True) == 'Halo! Ada yang bisa aku bantu?'
+
+
+def test_new_subject_in_a_followup_is_searched_on_its_own():
+    assistant, retriever, _ = assistant_with([{'source': 'faq.pdf', 'page': 1, 'text': 'Evidence.'}])
+    assistant.memory.append('Ada jurusan apa di BINUS ASO?', 'Automotive & Robotics Engineering [1].')
+    assistant.ask('Ada UKM yang berhubungan dengan itu?')
+    searched = [call.args[0] for call in retriever.retrieve.call_args_list]
+    assert searched[0].startswith('Ada UKM yang berhubungan dengan itu?') and 'Automotive' not in searched[0]
+    assert 'Automotive' in searched[1]
+
+
 def test_reply_cut_by_token_limit_ends_on_a_full_sentence():
     client = RecordingClient([{'role': 'assistant', 'content': 'Ada tiga jurusan [1]. Kamu bisa belajar rob'}])
     client.chat = (lambda original: lambda **kwargs: {**original(**kwargs), 'done_reason': 'length'})(client.chat)

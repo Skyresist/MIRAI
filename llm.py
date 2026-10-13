@@ -54,6 +54,9 @@ Give a longer explanation only when the user explicitly asks for detail.
 If the message is only a greeting, thanks or small talk, reply naturally and ignore the evidence.
 University facts MUST come only from the supplied PDF evidence or search_documents results.
 Preserve names, program titles, dates and accreditation numbers exactly.
+Keep every name attached to exactly what the evidence attaches it to (for example which lecturer
+teaches which program). Never move a name to a different program, and never state a relationship
+the evidence does not state (such as a club belonging to a program).
 Cite evidence using [1], [2], etc. Do not invent facilities, clubs, fees or admissions details.
 If evidence does not support a university answer, say: {fallback}
 Use that exact sentence alone. Do not mention documents, PDFs, missing evidence or sources.
@@ -165,6 +168,8 @@ class OllamaChat:
                 text = re.sub(r'<think>.*?</think>', '', message.get('content') or '', flags=re.S).strip()
                 if '</think>' in text:
                     text = text.rsplit('</think>', 1)[-1].strip()
+                # Qwen adds 😊 despite the prompt; the speaker would try to pronounce it.
+                text = re.sub(r'\s*[\U0001F000-\U0001FAFF☀-➿️‍]+', '', text).strip()
                 if not text:
                     raise RuntimeError('Ollama returned an empty answer. Increase --max-tokens or use --no-think.')
                 if response.get('done_reason') == 'length':

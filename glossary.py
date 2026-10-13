@@ -50,7 +50,7 @@ class Glossary:
             r'\b(entrance test|admission test|exam to enter)\b': 'TPKS Tes Potensi Keberhasilan Studi',
             r'\b(clubs?|extracurricular|organi[sz]ations?)\b': 'UKM Unit Kegiatan Mahasiswa',
             r'\b(located|location|address|where is (the )?campus)\b': 'lokasi kampus',
-            r'\b(lecturers?|teachers?|professors?|sensei)\b': 'dosen',
+            r'\b(lecturers?|teachers?|teach(?:es|ing)?|professors?|sensei|who teaches)\b': 'dosen mengajar',
             r'\b(graduates?|alumni|careers?|jobs?)\b': 'alumni lulusan bekerja perusahaan',
             r'\b(midterms?|exams?)\b': 'Ujian Tengah Semester UTS Enrichment Week',
             r'\b(language of instruction|taught in|english classes)\b': 'bahasa pengantar kuliah bahasa Inggris',

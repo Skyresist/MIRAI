@@ -167,7 +167,13 @@ class Assistant:
             return json.dumps(self.memory.search(query), ensure_ascii=False)
 
         skip_search = social or needs_topic or is_memory_request(question)
-        context = '' if skip_search else search_documents(query[:2000])
+        context = ''
+        if not skip_search:
+            # Search the visitor's own words first: in "Ada UKM yang berhubungan dengan itu?" the new
+            # subject (UKM) must not be drowned out by the previous answer appended for context.
+            if query != question:
+                search_documents(question)
+            context = search_documents(query[:2000])
         memory_or_chat = re.search(
             r'\b(hello|hi|halo|hai|thanks|thank|terima kasih|remember|recall|ingat|tadi|earlier)\b|'
             r'\b(my name|nama saya|nama aku|what did|apa yang (saya|aku)|you said|i am|saya (bernama|suka))\b',

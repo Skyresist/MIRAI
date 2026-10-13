@@ -27,7 +27,8 @@ VISITS = {
         ('Halo!', 'social', {}),
         ('Ada jurusan apa saja?', 'fact', {'all': ['Automotive', 'Product Design', 'Business']}),
         ('Aku suka mobil dan robot, cocoknya jurusan yang mana?', 'fact', {'all': ['Automotive']}),
-        ('Ada UKM yang berhubungan dengan itu?', 'fact', {'any': ["D'BASE", 'BASE CORE', 'AeroBASE']}),
+        ('Ada UKM yang berhubungan dengan itu?', 'fact', {'any': ["D'BASE", 'BASE CORE', 'AeroBASE'],
+                                                          'none': ['di bawah program', 'bagian dari program']}),
         ('Makasih ya!', 'social', {}),
     ]),
     'en-scholarships': ('en', [
@@ -47,7 +48,7 @@ VISITS = {
         ('Are you a robot?', 'social', {}),
         ('What is quantum physics?', 'refuse', {}),
         ('What facilities are there?', 'fact', {'any': ['3D Print', 'Library', 'Monozukuri', 'Computer Lab', 'Physics Lab']}),
-        ('Who teaches Product Design Engineering?', 'fact', {'any': ['Tak Sensei', 'Tak']}),
+        ('Who teaches Product Design Engineering?', 'fact', {'any': ['Tak Sensei', 'Tak'], 'none': ['Saito']}),
         ('Is the class size big?', 'fact', {'any': ['28', '30', 'small']}),
     ]),
     'en-memory': ('en', [
@@ -70,6 +71,8 @@ def check(kind, expect, text, language):
             problems.append(f"missing {[k for k in expect['all'] if k.casefold() not in lowered]}")
         if expect.get('any') and not any(k.casefold() in lowered for k in expect['any']):
             problems.append(f"none of {expect['any']}")
+        if expect.get('none') and any(k.casefold() in lowered for k in expect['none']):
+            problems.append(f"wrong claim {[k for k in expect['none'] if k.casefold() in lowered]}")
     elif kind == 'refuse' and not refused:
         problems.append('answered an unsupported question')
     elif kind in ('social', 'social-or-fact'):
