@@ -127,6 +127,50 @@ def test_bad_requests_and_long_outages_still_fail(monkeypatch):
         OllamaChat(Settings(), CrashingThenWorkingClient(9, httpx.ConnectError('down'))).answer('x', '', [])
 
 
+def test_evidence_uses_whole_entries_best_first_and_never_a_half_list():
+    from assistant import select_context
+    big = {'source': 'faq.pdf', 'page': 3, 'text': 'Programs: A, B, C. ' * 30}
+    small = {'source': 'faq.pdf', 'page': 4, 'text': 'Clubs: BASE CORE.'}
+    text, used = select_context([big, small], max_chars=200)
+    assert used == [big] and text.endswith('...'), 'only the first entry may be cut, visibly'
+    text, used = select_context([small, big], max_chars=200)
+    assert used == [small] and 'Programs' not in text, 'a later entry that does not fit is skipped'
+
+
+def test_advice_pins_the_program_overview_and_a_related_club():
+    from assistant import PROGRAM_OVERVIEW_QUERY
+    hits = {'registration': {'source': 'faq.pdf', 'page': 6, 'chunk_id': 1, 'text': 'Daftar.', 'score': 0.81},
+            'majors': {'source': 'faq.pdf', 'page': 3, 'chunk_id': 2, 'text': 'Jurusan.', 'score': 0.80},
+            'clubs': {'source': 'faq.pdf', 'page': 4, 'chunk_id': 3, 'text': 'UKM.', 'score': 0.79}}
+    retriever = Mock()
+    retriever.retrieve.side_effect = lambda query, top_k: (
+        [hits['majors']] if PROGRAM_OVERVIEW_QUERY in query else
+        [hits['clubs']] if 'UKM' in query else [hits['registration'], hits['majors']])
+    chat = Mock()
+    chat.answer.return_value = 'Automotive & Robotics [1], BASE CORE [2].'
+    settings = Settings(context_chars=60)  # Room for two short entries only.
+    answer = Assistant(settings, retriever, chat=chat).ask('I like robotics, which faculty should I apply to?')
+    assert [hit['text'] for hit in answer.sources] == ['Jurusan.', 'UKM.'], 'pinned entries beat a near-tie'
+
+
+@pytest.mark.parametrize('question,registration', [('How do I apply?', True), ('Which faculty should I apply to?', False),
+                                                   ('What is the application process?', True)])
+def test_apply_means_registration_only_for_the_process(question, registration):
+    from glossary import Glossary
+    expanded = Glossary().expand_query(question)
+    assert ('cara mendaftar' in expanded) is registration
+    if 'faculty' in question:
+        assert 'jurusan program studi' in expanded
+
+
+def test_vague_continuation_is_a_followup_but_a_new_subject_is_not():
+    from assistant import conversation_query
+    history = [{'role': 'user', 'content': 'Which BINUS ASO program fits robotics?'},
+               {'role': 'assistant', 'content': 'Automotive & Robotics Engineering [1].'}]
+    assert conversation_query('What about more for learning?', history)[0] != 'What about more for learning?'
+    assert conversation_query('What about the weather?', history) == ('What about the weather?', False, False)
+
+
 def test_emoji_are_removed_before_display_and_speech():
     client = RecordingClient([{'role': 'assistant', 'content': 'Halo! Ada yang bisa aku bantu? 😊'}])
     assert OllamaChat(Settings(), client).answer('Halo', '', [], 'id', social=True) == 'Halo! Ada yang bisa aku bantu?'

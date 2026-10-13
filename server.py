@@ -84,7 +84,10 @@ class Kiosk:
             self._speech_error = str(error)
             logger.warning('Voice unavailable: %s', error)
         try:
-            self.assistant.chat.client.generate(model=self.settings.model, prompt='', keep_alive=-1)
+            # Same num_ctx as real questions: a different size makes Ollama reload the model on the
+            # first question (slow) and briefly hold two copies (out-of-memory risk).
+            self.assistant.chat.client.generate(model=self.settings.model, prompt='', keep_alive=-1,
+                                                options={'num_ctx': self.settings.num_ctx})
         except Exception as error:
             logger.warning('Could not preload %s: %s', self.settings.model, error)
 

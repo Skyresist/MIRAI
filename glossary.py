@@ -41,12 +41,15 @@ class Glossary:
         topics = {
             r'\b(fasilitas|facilities)\b': 'fasilitas facilities laboratorium lab library canteen perpustakaan',
             r'\b(akreditasi|accreditation)\b': 'akreditasi accreditation BAN-PT Unggul',
-            r'\b(jurusan|major|majors)\b': 'jurusan program studi degree engineering',
+            # Visitors say "faculty"/"fakultas"; the FAQ only says "jurusan"/"program studi".
+            r'\b(jurusan|majors?|faculty|faculties|fakultas|prodi)\b': 'jurusan program studi degree engineering',
             # The FAQ is Indonesian; give English questions the FAQ's own words to match.
             r'\b(scholarships?|grants?)\b': 'beasiswa',
             r'\b(tuition|fees?|costs?|how much|price)\b': 'biaya perkuliahan pembayaran',
             r'\b(installments?|instalments?|credit card|bank loan)\b': 'cicilan bank kartu kredit',
-            r'\b(register|registration|apply|application|enrol+|admissions?)\b': 'cara mendaftar pendaftaran',
+            # "How do I apply" is registration; "which faculty should I apply to" is choosing a major.
+            r'\b(register|registration|enrol+|admissions?|how (?:do|can|to) (?:i )?apply|apply (?:for|now|online)|'
+            r'application (?:form|process))\b': 'cara mendaftar pendaftaran',
             r'\b(entrance test|admission test|exam to enter)\b': 'TPKS Tes Potensi Keberhasilan Studi',
             r'\b(clubs?|extracurricular|organi[sz]ations?)\b': 'UKM Unit Kegiatan Mahasiswa',
             r'\b(located|location|address|where is (the )?campus)\b': 'lokasi kampus',

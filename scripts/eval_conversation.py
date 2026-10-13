@@ -53,6 +53,13 @@ VISITS = {
         ('Who teaches Product Design Engineering?', 'fact', {'any': ['Tak Sensei', 'Tak'], 'none': ['Saito']}),
         ('Is the class size big?', 'fact', {'any': ['28', '30', 'small']}),
     ]),
+    # Reported on the Jetson: 'faculty'/'apply' pulled registration and a club was named as a faculty.
+    'advice-from-jetson-test': ('en', [
+        ('I like robotics, which faculty should I apply to?', 'fact',
+         {'all': ['Automotive'], 'none': ['Faculty of Engineering', 'Mechanical Engineering program']}),
+        ('ID:Aku suka robot, sebaiknya pilih jurusan apa?', 'fact',
+         {'all': ['Automotive'], 'none': ['Teknik Mesin', 'Teknik Elektro']}),
+    ]),
     # The visitor taps EN halfway through: earlier Indonesian turns must not pull the reply back.
     'language-switch': ('id', [
         ('Ada beasiswa apa saja?', 'fact', {'any': ['Widia', 'ASO Japan Grant']}),

@@ -29,23 +29,39 @@ IDENTITY_QUESTION = re.compile(
     r"nama (?:kamu|anda) siapa|siapa namamu|perkenalkan (?:diri|dirimu)|apa tugasmu)[?!. ]*", re.I)
 
 
-def build_context(results: list[dict], max_chars: int = 9000) -> str:
-    parts, remaining = [], max_chars
-    for index, result in enumerate(results, start=1):
+def select_context(results: list[dict], max_chars: int = 9000) -> tuple[str, list[dict]]:
+    """Whole FAQ entries in the given order; returns the text and the entries actually included.
+
+    An entry that does not fit is skipped, not cut: a list that stops halfway ("Automotive & Robotics,
+    ...") makes a small model invent the rest. Only the first entry may be cut, so there is evidence.
+    """
+    parts, used, remaining = [], [], max_chars
+    for result in results:
         location = f"page {result['page']}" if result.get('page') else result.get('section', 'document')
-        header = f"[{index}] {result['source']} | {location}\n"
-        if remaining <= len(header) + 40:
-            break
-        text = result['text'][:remaining - len(header) - 2]
+        header = f"[{len(used) + 1}] {result['source']} | {location}\n"
+        text = result['text']
+        if len(header) + len(text) > remaining:
+            if used or remaining <= len(header) + 40:
+                continue
+            text = text[:remaining - len(header) - 2] + '...'
         parts.append(header + text)
+        used.append(result)
         remaining -= len(header) + len(text) + 2
-    return '\n\n'.join(parts)
+    return '\n\n'.join(parts), used
+
+
+def source_key(hit: dict) -> tuple:
+    return hit['source'], hit.get('page'), hit.get('chunk_id')
+
+
+def build_context(results: list[dict], max_chars: int = 9000) -> str:
+    return select_context(results, max_chars)[0]
 
 
 UNIVERSITY_TERMS = re.compile(
     r"\b(binus|aso|university|universities|college|campus|tuition|admissions?|"
     r"scholarships?|accreditation|curriculum|majors?|student clubs?|study programs?|"
-    r"universitas|kampus|kuliah|jurusan|mahasiswa|pendaftaran|beasiswa|akreditasi|"
+    r"universitas|kampus|kuliah|jurusan|mahasiswa|pendaftaran|beasiswa|akreditasi|faculty|faculties|fakultas|"
     r"kurikulum|ukm|aerobase|d'base|dorm|dormitory|dormitories|asrama|parking|parkir)\b", re.I)
 RELATED_TERMS = re.compile(
     r'\b(programs?|courses?|fees?|costs?|facilities|labs?|requirements?|duration|'
@@ -56,6 +72,14 @@ REFERENCES = re.compile(
     r'itu|tersebut|yang mana|yang tadi)\b', re.I)
 ELLIPSIS = re.compile(
     r'^(and|what about|how about|bagaimana dengan|kalau|lalu|terus)\b', re.I)
+ADVICE = re.compile(
+    r"\b(i like|i love|i enjoy|i'?m interested|interested in|suka|senang|tertarik|hobi|hobby|hobbies|"
+    r"cocok|should i|sebaiknya|recommend|rekomendasi|saran|fits? me|pilih)\b", re.I)
+PROGRAM_OVERVIEW_QUERY = 'Program studi apa saja yang ditawarkan BINUS ASO? What study programs are offered?'
+# Vague continuations that only make sense with the previous topic ("What about more for learning?"),
+# unlike a new subject ("What about the weather?").
+CONTINUATION = re.compile(
+    r'\b(more|else|other|another|learn|learning|study|studying|lagi|lain|lainnya|belajar|selain itu)\b', re.I)
 SHORT_FOLLOWUP = re.compile(
     r'^(how much|how long|where|when|berapa|berapa lama|di mana|dimana|kapan)[?!. ]*$', re.I)
 # Small talk is recognised positively. Anything not clearly social and without FAQ evidence still
@@ -94,7 +118,7 @@ def conversation_query(question, history):
     # "Are there scholarships?" / "What programs are there?": existential "there" points nowhere.
     reference_text = re.sub(r'\b(?:is|are|was|were) there\b|\bthere (?:is|are|was|were)\b', '', reference_text, flags=re.I)
     followup = bool(REFERENCES.search(reference_text) or SHORT_FOLLOWUP.fullmatch(question)
-                    or (ELLIPSIS.search(question) and RELATED_TERMS.search(question)))
+                    or (ELLIPSIS.search(question) and (RELATED_TERMS.search(question) or CONTINUATION.search(question))))
     if not followup:
         return question, university, False
     if len(history) < 2:
@@ -145,20 +169,29 @@ class Assistant:
         # "How's it going?" contains "it" but is not a follow-up about the previous program.
         query, university, needs_topic = (question, False, False) if social else conversation_query(question, history)
         fallback = UNIVERSITY_FALLBACK[language] if university else FALLBACK[language]
-        sources = []
+        sources, cited, pinned = [], [], set()
 
         def search_documents(query: str) -> str:
             """Search local university PDFs. Use for university facts or a follow-up topic."""
+            return search(query)
+
+        def search(query, pin_best=False):
             if not isinstance(query, str) or not query.strip() or len(query) > 2000:
                 return json.dumps({'error': 'query must contain 1 to 2000 characters'})
             hits = self.retriever.retrieve(self.glossary.expand_query(query), top_k=self.settings.top_k)
-            keys = {(hit['source'], hit.get('page'), hit.get('chunk_id')) for hit in sources}
+            keys = {source_key(hit) for hit in sources}
             for hit in hits:
-                key = (hit['source'], hit.get('page'), hit.get('chunk_id'))
-                if key not in keys and len(sources) < self.settings.top_k * 2:
+                if source_key(hit) not in keys and len(sources) < self.settings.top_k * 3:
                     sources.append(hit)
-                    keys.add(key)
-            return build_context(sources, self.settings.context_chars) or 'No relevant PDF evidence found.'
+                    keys.add(source_key(hit))
+            if pin_best and hits:
+                pinned.add(source_key(hits[0]))
+            # Pinned entries, then best match first: the evidence budget goes to what the answer needs
+            # rather than to search order or a near-tie.
+            sources.sort(key=lambda hit: (source_key(hit) not in pinned, -hit.get('score', 0)))
+            text, used = select_context(sources, self.settings.context_chars)
+            cited[:] = used  # Citations [1], [2] and the on-screen sources match what the model saw.
+            return text or 'No relevant PDF evidence found.'
 
         def recall_memory(query: str) -> str:
             """Search earlier messages in this session. These are conversation, not verified university facts."""
@@ -171,9 +204,17 @@ class Assistant:
         if not skip_search:
             # Search the visitor's own words first: in "Ada UKM yang berhubungan dengan itu?" the new
             # subject (UKM) must not be drowned out by the previous answer appended for context.
-            if query != question:
-                search_documents(question)
-            context = search_documents(query[:2000])
+            # In a follow-up the visitor's own words carry the new need ("more for learning?"); pin
+            # their best match so the previous answer's FAQs cannot fill the whole evidence budget.
+            searches = [(question, True)] if query != question else []
+            searches.append((query[:2000], False))
+            if ADVICE.search(question):
+                # "I like robotics, which major?" needs the overview of all programs (fixed query: the
+                # visitor's words pulled in look-alike FAQs) AND the club matching their interest.
+                searches += [(PROGRAM_OVERVIEW_QUERY, True),
+                             (question + ' UKM Unit Kegiatan Mahasiswa klub', True)]
+            for text, pin_best in searches:
+                context = search(text, pin_best)
         memory_or_chat = re.search(
             r'\b(hello|hi|halo|hai|thanks|thank|terima kasih|remember|recall|ingat|tadi|earlier)\b|'
             r'\b(my name|nama saya|nama aku|what did|apa yang (saya|aku)|you said|i am|saya (bernama|suka))\b',
@@ -198,5 +239,5 @@ class Assistant:
             text = fallback
         self.memory.append(question, text)
         if text.strip() in (FALLBACK[language], UNIVERSITY_FALLBACK[language], CLARIFY_TOPIC[language]):
-            sources = []
-        return Answer(text=text, sources=sources, language=language)
+            cited = []
+        return Answer(text=text, sources=cited, language=language)

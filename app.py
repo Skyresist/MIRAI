@@ -42,7 +42,7 @@ def parser():
     result.add_argument('--threshold', type=float, help="Minimum PDF match score; default depends on the embedding model.")
     result.add_argument('--max-tokens', type=positive, help='Reply tokens; default 192, or 160 in low-memory mode.')
     result.add_argument('--num-ctx', type=positive,
-                        help='Ollama context tokens; default 4096, or 2048 in low-memory mode.')
+                        help='Ollama context tokens; default 4096, or 3072 in low-memory mode.')
     result.add_argument('--think', action=argparse.BooleanOptionalAction, default=False)
     result.add_argument('--glossary', type=Path, default=defaults.glossary_path)
     result.add_argument('--paperrag-index', type=Path, help='Use an existing trusted PaperRAG index instead of the built-in PDF loader.')
@@ -88,14 +88,17 @@ def build_settings(arguments):
         embedding_device=arguments.embedding_device, score_threshold=arguments.threshold,
         top_k=arguments.top_k or (2 if arguments.low_memory else defaults.top_k),
         max_tokens=arguments.max_tokens or (160 if arguments.low_memory else defaults.max_tokens),
-        num_ctx=arguments.num_ctx or (2048 if arguments.low_memory else defaults.num_ctx), think=arguments.think,
+        num_ctx=arguments.num_ctx or (3072 if arguments.low_memory else defaults.num_ctx), think=arguments.think,
         glossary_path=arguments.glossary, whisper_model=arguments.whisper_model,
         speech_device=arguments.speech_device, voices_dir=arguments.voices_dir,
     )
     if arguments.low_memory:
         settings.history_turns = 3
         settings.history_chars = 900
-        settings.context_chars = 2200
+        # Measured: system prompt + 2200 chars of evidence already reached ~1980 tokens, so 2048
+        # overflowed and Ollama silently dropped the start of the prompt (the rules). With the
+        # q8_0 KV cache from tune_jetson.sh, 3072 tokens still cost less than 2048 at f16.
+        settings.context_chars = 3600  # Whole FAQ entries only: the majors and the UKM list both fit.
         print(f'Low-memory mode: {settings.embedding_backend} PDF search, smaller recent-memory and evidence windows. '
               'Conversation memory lasts only for this visit.', file=sys.stderr)
     return settings
