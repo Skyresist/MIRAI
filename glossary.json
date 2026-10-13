@@ -1,0 +1,32 @@
+{
+  "speech_corrections": {
+    "d'binus aso": "di BINUS ASO",
+    "d’binus aso": "di BINUS ASO"
+  },
+  "terms": [
+    {
+      "canonical": "BINUS ASO",
+      "aliases": ["binus aso", "binus asso", "bina aso", "binus a so"],
+      "search": "BINUS ASO School of Engineering kampus university",
+      "pronunciation": {"id": "Binus Aso", "en": "Binus Aso"}
+    },
+    {
+      "canonical": "UKM",
+      "aliases": ["ukm", "u k m", "u.k.m", "u ka em"],
+      "search": "Unit Kegiatan Mahasiswa organisasi mahasiswa klub komunitas student clubs",
+      "pronunciation": {"id": "u ka em", "en": "U K M"}
+    },
+    {
+      "canonical": "D'BASE",
+      "aliases": ["d'base", "d base", "d-base"],
+      "search": "D'BASE UKM Unit Kegiatan Mahasiswa",
+      "pronunciation": {"id": "di beis", "en": "D Base"}
+    },
+    {
+      "canonical": "AeroBASE",
+      "aliases": ["aerobase", "aero base"],
+      "search": "AeroBASE UKM Unit Kegiatan Mahasiswa",
+      "pronunciation": {"id": "Aero Beis", "en": "Aero Base"}
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+"""Local paths and small-model defaults. No credentials are required."""
+from dataclasses import dataclass, field
+import os
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+BASE_MODEL = 'qwen3:4b-instruct-2507-q4_K_M'
+CHAT_MODEL = BASE_MODEL
+
+
+@dataclass
+class Settings:
+    model: str = field(default_factory=lambda: os.getenv('MIRAI_MODEL', CHAT_MODEL))
+    ollama_host: str = field(default_factory=lambda: os.getenv('OLLAMA_HOST', 'http://127.0.0.1:11434'))
+    pdf_dir: Path = field(default_factory=lambda: Path(os.getenv('MIRAI_PDF_DIR', str(ROOT / 'data/pdfs'))))
+    state_dir: Path = field(default_factory=lambda: Path(os.getenv('MIRAI_STATE_DIR', str(ROOT / '.mirai'))))
+    glossary_path: Path = ROOT / 'glossary.json'
+    embedding_model: str = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
+    embedding_backend: str = 'dense'
+    embedding_device: str = 'cpu'
+    top_k: int = 4
+    score_threshold: float = 0.25
+    history_turns: int = 6
+    history_chars: int = 3000
+    context_chars: int = 4500
+    num_ctx: int = 4096
+    max_tokens: int = 192
+    think: bool = False
+    session: str = 'default'
+    whisper_model: str = 'base'
+    speech_device: str = 'cpu'
+    voices_dir: Path = ROOT / 'models/voices'

@@ -1,0 +1,6 @@
+# Install CPU PyTorch separately; Jetson users should keep their NVIDIA wheel.
+sentence-transformers==5.1.1
+transformers==4.57.1
+scikit-learn==1.7.2
+pypdf==6.1.1
+ollama==0.6.0

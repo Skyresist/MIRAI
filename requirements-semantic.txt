@@ -1,0 +1,3 @@
+# CPU wheels available for Python 3.12 on Jetson ARM64 / Ubuntu 22.04.
+onnxruntime==1.30.0
+tokenizers==0.22.2

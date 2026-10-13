@@ -1,0 +1,13 @@
+.venv/
+.venv-backup.*/
+.setup-tools/
+.python/
+.mirai/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.wav
+*.onnx
+data/pdfs/
+models/
+.env
