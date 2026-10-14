@@ -1,5 +1,6 @@
 """Compare Whisper sizes on real recordings from the robot's microphone.
 
+0. Easiest: bash scripts/record_stt.sh (guided recording + this comparison). By hand:
 1. Record questions on the Jetson, e.g.:  arecord -f S16_LE -r 16000 -c 1 -d 5 recordings/q01.wav
 2. Write what was said in recordings/transcripts.tsv:  q01.wav<TAB>id<TAB>Apa saja UKM di BINUS ASO?
 3. python scripts/eval_stt.py recordings --models base small
