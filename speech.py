@@ -9,6 +9,9 @@ from config import Settings
 from glossary import Glossary
 
 VOICES = {'id': 'id_ID-news_tts-medium', 'en': 'en_US-lessac-medium'}
+# The news voice at Piper defaults reads too fast with no breath between sentences. length_scale > 1
+# is slower; noise_* add variation (Piper's own defaults when unset). Compare: scripts/try_voice.py.
+VOICE_TUNING = {'id': {'length_scale': 1.1, 'pause': 0.3}}
 
 
 class Speech:
@@ -73,8 +76,11 @@ class Speech:
             raise ValueError('No speech detected; try a clearer recording or --language id/en.')
         return self.glossary.normalize_speech(text), info.language if info.language in VOICES else 'en'
 
-    def synthesize(self, text: str, output: Path, language: str = 'en') -> Path:
+    def synthesize(self, text: str, output: Path, language: str = 'en', tuning: dict | None = None) -> Path:
+        from piper import SynthesisConfig
         voice = self.load_voice(language)
+        tuning = dict(VOICE_TUNING.get(language, {}) if tuning is None else tuning)
+        pause = tuning.pop('pause', 0.0)
         # Citations and Markdown belong in text, not in the spoken answer.
         text = re.sub(r'\[\d+\]', '', text)
         text = re.sub(r'[*#`]', '', text)
@@ -84,5 +90,13 @@ class Speech:
         output = Path(output)
         output.parent.mkdir(parents=True, exist_ok=True)
         with wave.open(str(output), 'wb') as wav:
-            voice.synthesize_wav(text, wav)
+            # Piper yields one chunk per sentence; synthesize_wav would join them with no gap.
+            for index, chunk in enumerate(voice.synthesize(text, syn_config=SynthesisConfig(**tuning))):
+                if index == 0:
+                    wav.setframerate(chunk.sample_rate)
+                    wav.setsampwidth(chunk.sample_width)
+                    wav.setnchannels(chunk.sample_channels)
+                else:
+                    wav.writeframes(bytes(chunk.sample_width * int(chunk.sample_rate * pause)))
+                wav.writeframes(chunk.audio_int16_bytes)
         return output

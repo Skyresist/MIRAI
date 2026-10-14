@@ -1,5 +1,8 @@
 from subprocess import CompletedProcess
+import sys
+from types import SimpleNamespace
 from unittest.mock import Mock
+import wave
 
 import pytest
 
@@ -58,3 +61,20 @@ def test_no_play_can_save_wave_without_accessing_sound_device(tmp_path, monkeypa
                      '--play', '--no-play', '--speak', str(output)]) == 0
     voice.synthesize.assert_called_once_with('Hello.', output, 'en')
     voice.play.assert_not_called()
+
+
+def test_sentences_get_a_breathing_pause_and_language_tuning(tmp_path, monkeypatch):
+    # Fake Piper: two one-sample sentences; records the config it was given.
+    chunk = SimpleNamespace(sample_rate=10, sample_width=2, sample_channels=1, audio_int16_bytes=b'\x01\x00')
+    voice = Mock(synthesize=Mock(return_value=[chunk, chunk]))
+    monkeypatch.setitem(sys.modules, 'piper', SimpleNamespace(SynthesisConfig=dict))
+    talker = Speech(Mock(), Mock(pronounce=lambda text, language: text))
+    talker.voices = {'id': voice, 'en': voice}
+    talker.synthesize('Satu. Dua.', tmp_path / 'id.wav', 'id')
+    assert voice.synthesize.call_args.kwargs['syn_config'] == {'length_scale': 1.1}
+    with wave.open(str(tmp_path / 'id.wav')) as wav:
+        assert wav.getnframes() == 1 + 3 + 1  # 0.3 s of silence at 10 Hz between the sentences
+    talker.synthesize('One. Two.', tmp_path / 'en.wav', 'en')
+    assert voice.synthesize.call_args.kwargs['syn_config'] == {}
+    with wave.open(str(tmp_path / 'en.wav')) as wav:
+        assert wav.getnframes() == 2  # English unchanged: no added pause
