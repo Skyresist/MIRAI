@@ -41,6 +41,10 @@ cd ~/MIRAI-Jetson && bash scripts/update_jetson.sh && bash scripts/start_kiosk.s
 The update script refuses to run if files were edited directly on the Jetson,
 so nothing is overwritten silently. Make edits on the laptop and push instead.
 
+**Start on boot** (once): `bash scripts/install_autostart.sh`, then turn on automatic
+login in Settings > Users. MIRAI opens full-screen after every power-on; its log is
+`.mirai/kiosk.log`. Undo with `bash scripts/install_autostart.sh --remove`.
+
 ## First install from a ZIP (original instructions)
 
 1. Download the source ZIP from this chat to your laptop. Models and university
