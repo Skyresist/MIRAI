@@ -42,6 +42,28 @@ def main():
         print(f'Playing {label}: {tuning}', flush=True)
         speech.play(output)
         input('  Enter = next preset ')
+    if language == 'id':
+        output = settings.state_dir / 'try-voice.wav'
+        print('Loading E (Meta MMS voice, first run downloads ~145 MB) ...', flush=True)
+        mms_wav(SAMPLES['id'], output)
+        print('Playing E (Meta MMS, a different offline model)', flush=True)
+        speech.play(output)
+
+
+def mms_wav(text, output):
+    """Meta's MMS Indonesian voice (facebook/mms-tts-ind, CC-BY-NC 4.0): the main offline alternative to Piper."""
+    import wave
+    import torch
+    from transformers import AutoTokenizer, VitsModel
+    tokenizer = AutoTokenizer.from_pretrained('facebook/mms-tts-ind')
+    model = VitsModel.from_pretrained('facebook/mms-tts-ind')
+    with torch.no_grad():
+        audio = model(**tokenizer(text, return_tensors='pt')).waveform[0]
+    with wave.open(str(output), 'wb') as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(model.config.sampling_rate)
+        wav.writeframes((audio.clamp(-1, 1) * 32767).short().numpy().tobytes())
 
 
 if __name__ == '__main__':
