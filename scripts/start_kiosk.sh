@@ -53,6 +53,8 @@ fi
 export DISPLAY="${DISPLAY:-:0}"
 chrome="$(command -v chromium-browser || command -v chromium || command -v google-chrome || true)"
 if [[ -n "$chrome" ]]; then
+    # A cached copy of the old screen would hide UI updates (e.g. the cancel button) after an update.
+    rm -rf "$HOME/.mirai-kiosk/Default/Cache" "$HOME/.mirai-kiosk/Default/Code Cache"
     # localhost counts as a secure origin, so the USB mic works without HTTPS. The flags
     # auto-allow the mic, allow spoken answers without an extra tap and block swipe-back.
     # CPU and GPU share 8 GB on the Jetson, so the last flags keep the browser small enough
