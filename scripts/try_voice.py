@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import Settings
 from glossary import Glossary
-from speech import Speech, respell_id
+from speech import Speech
 
 SAMPLES = {
     'id': 'Halo, selamat datang di BINUS ASO! Kami punya beberapa jurusan, misalnya Automotive and '
@@ -23,10 +23,9 @@ SAMPLES = {
 # length_scale: >1 slower. noise_scale: tone variation (Piper default 0.667). noise_w_scale: rhythm
 # variation (default 0.8). pause: seconds of silence between sentences.
 PRESETS = {
-    'A (old: Piper defaults)': {},
-    'B (current: slower + pauses)': {'length_scale': 1.1, 'pause': 0.3},
-    'C (slower + livelier tone)': {'length_scale': 1.1, 'noise_scale': 0.8, 'noise_w_scale': 0.9, 'pause': 0.3},
-    'D (calm, even slower)': {'length_scale': 1.2, 'noise_scale': 0.5, 'pause': 0.4},
+    'C (chosen: slower + livelier tone)': {'length_scale': 1.1, 'noise_scale': 0.8, 'noise_w_scale': 0.9, 'pause': 0.3},
+    'C+ (current default: more intonation)': {'length_scale': 1.1, 'noise_scale': 0.9, 'noise_w_scale': 0.9, 'pause': 0.3},
+    'C++ (even more; may start to wobble)': {'length_scale': 1.1, 'noise_scale': 1.0, 'noise_w_scale': 0.9, 'pause': 0.3},
 }
 
 
@@ -42,28 +41,6 @@ def main():
         print(f'Playing {label}: {tuning}', flush=True)
         speech.play(output)
         input('  Enter = next preset ')
-    if language == 'id':
-        output = settings.state_dir / 'try-voice.wav'
-        print('Loading E (Meta MMS voice, first run downloads ~145 MB) ...', flush=True)
-        mms_wav(respell_id(SAMPLES['id']), output)
-        print('Playing E (Meta MMS, a different offline model)', flush=True)
-        speech.play(output)
-
-
-def mms_wav(text, output):
-    """Meta's MMS Indonesian voice (facebook/mms-tts-ind, CC-BY-NC 4.0): the main offline alternative to Piper."""
-    import wave
-    import torch
-    from transformers import AutoTokenizer, VitsModel
-    tokenizer = AutoTokenizer.from_pretrained('facebook/mms-tts-ind')
-    model = VitsModel.from_pretrained('facebook/mms-tts-ind')
-    with torch.no_grad():
-        audio = model(**tokenizer(text, return_tensors='pt')).waveform[0]
-    with wave.open(str(output), 'wb') as wav:
-        wav.setnchannels(1)
-        wav.setsampwidth(2)
-        wav.setframerate(model.config.sampling_rate)
-        wav.writeframes((audio.clamp(-1, 1) * 32767).short().numpy().tobytes())
 
 
 if __name__ == '__main__':

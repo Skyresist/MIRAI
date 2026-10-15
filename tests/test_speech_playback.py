@@ -71,7 +71,7 @@ def test_sentences_get_a_breathing_pause_and_language_tuning(tmp_path, monkeypat
     talker = Speech(Mock(), Mock(pronounce=lambda text, language: text))
     talker.voices = {'id': voice, 'en': voice}
     talker.synthesize('Satu. Dua.', tmp_path / 'id.wav', 'id')
-    assert voice.synthesize.call_args.kwargs['syn_config'] == {'length_scale': 1.1}
+    assert voice.synthesize.call_args.kwargs['syn_config'] == {'length_scale': 1.1, 'noise_scale': 0.9, 'noise_w_scale': 0.9}
     with wave.open(str(tmp_path / 'id.wav')) as wav:
         assert wav.getnframes() == 1 + 3 + 1  # 0.3 s of silence at 10 Hz between the sentences
     talker.synthesize('One. Two.', tmp_path / 'en.wav', 'en')
