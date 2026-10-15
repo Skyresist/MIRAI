@@ -51,11 +51,12 @@ if [[ "$browser" != true ]]; then
 fi
 
 export DISPLAY="${DISPLAY:-:0}"
-# Started at login, the browser can open before Ubuntu has found the USB mic and then keeps the
-# Jetson's built-in input, which records silence. Wait (up to 60 s) until the USB mic is the default.
+# After every reboot Ubuntu picks the Jetson's built-in input (nothing plugged in: silence) as the
+# default mic, and the browser uses the default. Wait (up to 60 s) for the USB mic, then make it the default.
 if command -v pactl >/dev/null 2>&1; then
     for _ in $(seq 60); do
-        pactl get-default-source 2>/dev/null | grep -qi usb && break
+        usb_mic="$(pactl list short sources 2>/dev/null | awk '$2 ~ /^alsa_input\..*usb/ {print $2; exit}')"
+        [[ -n "$usb_mic" ]] && pactl set-default-source "$usb_mic" && break
         sleep 1
     done
     echo "Microphone: $(pactl get-default-source 2>/dev/null)"
