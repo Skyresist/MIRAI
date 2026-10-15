@@ -12,6 +12,41 @@ VOICES = {'id': 'id_ID-news_tts-medium', 'en': 'en_US-lessac-medium'}
 # The news voice at Piper defaults reads too fast with no breath between sentences. length_scale > 1
 # is slower; noise_* add variation (Piper's own defaults when unset). Compare: scripts/try_voice.py.
 VOICE_TUNING = {'id': {'length_scale': 1.1, 'pause': 0.3}}
+# The Indonesian voice reads English words with Indonesian letter rules ("Engineering" breaks apart),
+# so English terms from the FAQ are respelled the way an Indonesian speaker says them (c = "ch", sy = "sh").
+# Add a word here when it sounds wrong; keys are lowercase.
+ID_RESPELL = {
+    'and': 'en', '&': 'en', 'the': 'de',
+    'school': 'skul', 'engineering': 'enjiniring', 'engineer': 'enjinir', 'university': 'yuniversiti',
+    'college': 'kolej', 'colleges': 'kolejis', 'group': 'grup',
+    'revolution': 'revolusyen', 'hands-on': 'hens on', 'experience': 'ekspiriens', 'project': 'projek',
+    'project-based': 'projek beist', 'based': 'beist', 'learning': 'lerning', 'internship': 'internsyip',
+    'enrichment': 'enricmen', 'international': 'internesyenal', 'curriculum': 'kurikulum',
+    'japanese': 'jepanis', 'language': 'lengwej', 'course': 'kors', 'professional': 'profesyenal',
+    'lecturers': 'lekcerers', 'week': 'wik', 'summer': 'samer', 'research': 'riserc', 'study': 'stadi',
+    'abroad': 'abrod', 'entrepreneurship': 'ontreprenersyip', 'small': 'smol', 'class': 'kles',
+    'method': 'metod', 'station': 'steisyen', 'automotive': 'otomotif', 'robotics': 'robotiks',
+    'product': 'prodak', 'design': 'disain', 'business': 'bisnis', 'computer': 'kompyuter',
+    'science': 'saiens', 'mechanical': 'mekanikal', 'electrical': 'elektrikal', 'machine': 'masyin',
+    'artificial': 'artifisyal', 'intelligence': 'intelijens', 'manufacturing': 'menyufekcering',
+    'technology': 'teknoloji', 'information': 'informeisyen', 'systems': 'sistems', 'supply': 'saplai',
+    'chain': 'cein', 'scholarship': 'skolarsyip', 'head': 'hed',
+    'development': 'divelopmen', 'fee': 'fi', 'fixed': 'fikst', 'tuition': 'tuisyen',
+    'variable': 'veriabel', 'equipment': 'ekuipmen', 'expression': 'ekspresyen', 'technique': 'teknik',
+    'physics': 'fisiks', 'ergonomic': 'ergonomik',
+    'library': 'laibreri', 'canteen': 'kentin', 'club': 'klab', 'drone': 'dron', 'campus': 'kempus',
+    'hiring': 'hairing', 'online': 'onlain', 'interview': 'interviu', 'prototype': 'prototaip',
+    'prototyping': 'prototaiping', 'sketching': 'skecing', 'modelling': 'modeling', 'gadget': 'gejet',
+    'tools': 'tuls', 'hub': 'hab', 'website': 'websait', 'python': 'paiton', 'c++': 'si plas plas',
+    'iot': 'ai o ti', 'ai': 'e ai', 'autocad': 'oto ked', 'shell': 'syel', 'eco-marathon': 'iko maraton',
+    'united': 'yunaited', 'bike': 'baik',
+}
+ID_RESPELL_RE = re.compile(
+    r'(?<!\w)(' + '|'.join(map(re.escape, sorted(ID_RESPELL, key=len, reverse=True))) + r')(?!\w)', re.I)
+
+
+def respell_id(text: str) -> str:
+    return ID_RESPELL_RE.sub(lambda match: ID_RESPELL[match[0].lower()], text)
 
 
 class Speech:
@@ -85,6 +120,8 @@ class Speech:
         text = re.sub(r'\[\d+\]', '', text)
         text = re.sub(r'[*#`]', '', text)
         text = self.glossary.pronounce(text.strip(), language)
+        if language == 'id':
+            text = respell_id(text)
         if not text:
             raise ValueError('No text to speak')
         output = Path(output)

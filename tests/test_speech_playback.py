@@ -78,3 +78,19 @@ def test_sentences_get_a_breathing_pause_and_language_tuning(tmp_path, monkeypat
     assert voice.synthesize.call_args.kwargs['syn_config'] == {}
     with wave.open(str(tmp_path / 'en.wav')) as wav:
         assert wav.getnframes() == 2  # English unchanged: no added pause
+
+
+def test_english_terms_are_respelled_for_the_indonesian_voice_only(tmp_path, monkeypatch):
+    assert speech.respell_id('Jurusan Automotive & Robotics Engineering, pakai C++ dan AI.') == \
+        'Jurusan otomotif en robotiks enjiniring, pakai si plas plas dan e ai.'
+    assert speech.respell_id('Program project-based learning') == 'Program projek beist lerning'
+    assert speech.respell_id('Ainun belajar di kampus') == 'Ainun belajar di kampus'  # whole words only
+    chunk = SimpleNamespace(sample_rate=10, sample_width=2, sample_channels=1, audio_int16_bytes=b'\x01\x00')
+    voice = Mock(synthesize=Mock(return_value=[chunk]))
+    monkeypatch.setitem(sys.modules, 'piper', SimpleNamespace(SynthesisConfig=dict))
+    talker = Speech(Mock(), Mock(pronounce=lambda text, language: text))
+    talker.voices = {'id': voice, 'en': voice}
+    talker.synthesize('Business Engineering', tmp_path / 'en.wav', 'en')
+    assert voice.synthesize.call_args.args[0] == 'Business Engineering'
+    talker.synthesize('Business Engineering', tmp_path / 'id.wav', 'id')
+    assert voice.synthesize.call_args.args[0] == 'bisnis enjiniring'

@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import Settings
 from glossary import Glossary
-from speech import Speech
+from speech import Speech, respell_id
 
 SAMPLES = {
     'id': 'Halo, selamat datang di BINUS ASO! Kami punya beberapa jurusan, misalnya Automotive and '
@@ -45,7 +45,7 @@ def main():
     if language == 'id':
         output = settings.state_dir / 'try-voice.wav'
         print('Loading E (Meta MMS voice, first run downloads ~145 MB) ...', flush=True)
-        mms_wav(SAMPLES['id'], output)
+        mms_wav(respell_id(SAMPLES['id']), output)
         print('Playing E (Meta MMS, a different offline model)', flush=True)
         speech.play(output)
 
