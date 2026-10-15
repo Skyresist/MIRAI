@@ -2,7 +2,12 @@
   "speech_corrections": {
     "d'binus aso": "di BINUS ASO",
     "d’binus aso": "di BINUS ASO",
-    "monozukuri lab": "Monozukuri Lab"
+    "monozukuri lab": "Monozukuri Lab",
+    "colorship": "scholarship",
+    "color ship": "scholarship",
+    "jodosan": "jurusan",
+    "judusan": "jurusan",
+    "siarat": "syarat"
   },
   "terms": [
     {
@@ -13,7 +18,7 @@
     },
     {
       "canonical": "UKM",
-      "aliases": ["ukm", "u k m", "u.k.m", "u ka em", "u-ka-em", "ukaem", "uka em", "u kaem", "u k em", "you kay em"],
+      "aliases": ["ukm", "u k m", "u.k.m", "u ka em", "u-ka-em", "ukaem", "uka em", "u kaem", "u k em", "you kay em", "ukam", "uka m"],
       "search": "Unit Kegiatan Mahasiswa organisasi mahasiswa klub komunitas student clubs",
       "pronunciation": {"id": "u ka em", "en": "U K M"}
     },
@@ -53,7 +58,7 @@
     },
     {
       "canonical": "Kendo Club",
-      "aliases": ["kendo club", "kendo klub", "ken do club", "ken do klub", "kendobase", "kendo base"],
+      "aliases": ["kendo club", "kendo klub", "ken do club", "ken do klub", "condo club", "candle club", "kendall club", "condo klub", "kendobase", "kendo base"],
       "search": "Kendo Club UKM seni bela diri Jepang kendo shinai",
       "pronunciation": {"id": "Kendo Klab", "en": "Kendo Club"}
     },
@@ -71,13 +76,13 @@
     },
     {
       "canonical": "Widia Scholarship",
-      "aliases": ["widia scholarship", "widya scholarship", "beasiswa widia", "beasiswa widya", "widia", "widya"],
+      "aliases": ["widia scholarship", "widya scholarship", "beasiswa widia", "beasiswa widya", "widia", "widya", "video scholarship", "widia colorship", "video colorship"],
       "search": "Widia Scholarship beasiswa full prestasi",
       "pronunciation": {"id": "Widia Skolarsip", "en": "Widia Scholarship"}
     },
     {
       "canonical": "ASO Japan Grant Scholarship",
-      "aliases": ["aso japan grant scholarship", "aso japan grant", "ajgs", "a j g s", "a je ge es", "ajegees"],
+      "aliases": ["aso japan grant scholarship", "aso japan grant", "ajgs", "a j g s", "a je ge es", "ajegees", "aggs", "a g g s", "a-g-g-s"],
       "search": "ASO Japan Grant Scholarship AJGS beasiswa Development Fee Fixed Tuition Fee",
       "pronunciation": {"id": "Aso Japan Gran Skolarsip", "en": "ASO Japan Grant Scholarship"}
     },

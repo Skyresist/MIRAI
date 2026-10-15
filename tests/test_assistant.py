@@ -130,6 +130,11 @@ def test_glossary_and_pronunciation_preserve_word_boundaries():
     for heard in ('Apa itu Ha, em, be?', 'Apa itu ha-em-be?', 'Apa itu Haembe?', 'Apa itu H. M. B.?', 'Apa itu H&B?'):
         assert glossary.normalize_speech(heard).startswith('Apa itu HMB'), heard
     assert glossary.normalize_speech('Te, pe, ka, es itu apa?') == 'TPKS itu apa?'
+    # Real Whisper base output from the kiosk microphone test.
+    assert glossary.normalize_speech('Ada ukam apa saja?') == 'Ada UKM apa saja?'
+    assert glossary.normalize_speech('Is there a condo club?') == 'Is there a Kendo Club?'
+    assert glossary.normalize_speech('Siarat video scholarship apa?') == 'syarat Widia Scholarship apa?'
+    assert glossary.normalize_speech('Ada jodosan apa aja?') == 'Ada jurusan apa aja?'
     owners = {}
     for term in glossary.terms:  # Ignoring separators must not make two names collide.
         for alias in term['aliases']:
