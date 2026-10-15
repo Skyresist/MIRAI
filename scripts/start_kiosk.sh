@@ -55,7 +55,8 @@ export DISPLAY="${DISPLAY:-:0}"
 # default mic, and the browser uses the default. Wait (up to 60 s) for the USB mic, then make it the default.
 if command -v pactl >/dev/null 2>&1; then
     for _ in $(seq 60); do
-        usb_mic="$(pactl list short sources 2>/dev/null | awk '$2 ~ /^alsa_input\..*usb/ {print $2; exit}')"
+        # || true: at boot the sound server may not be up yet, and set -e must not end the kiosk.
+        usb_mic="$(pactl list short sources 2>/dev/null | awk '$2 ~ /^alsa_input\..*usb/ {print $2; exit}' || true)"
         [[ -n "$usb_mic" ]] && pactl set-default-source "$usb_mic" && break
         sleep 1
     done
