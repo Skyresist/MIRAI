@@ -7,7 +7,7 @@ import pytest
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
-from assistant import Assistant
+from assistant import Assistant, strip_trailing_apology, without_apologies
 from config import Settings
 from glossary import Glossary
 from llm import FALLBACK, UNIVERSITY_FALLBACK, OllamaChat, detect_language
@@ -112,6 +112,16 @@ def test_memory_search_escapes_sql_patterns(tmp_path):
     memory.append('plain', 'test')
     assert len(memory.search('%')) == 1
     assert memory.search("' OR 1=1 --") == []
+
+
+def test_apologies_neither_teach_nor_trail_a_good_answer():
+    # Kiosk report: after a few "Maaf, aku belum tahu" turns, a good answer ended with one too.
+    sorry = 'Maaf, aku belum tahu tentang itu.'
+    history = [{'role': 'user', 'content': 'asdf'}, {'role': 'assistant', 'content': sorry},
+               {'role': 'user', 'content': 'Apa itu UKM?'}, {'role': 'assistant', 'content': 'UKM adalah klub [1].'}]
+    assert without_apologies(history) == history[2:]
+    assert strip_trailing_apology('BINUS ASO adalah kampus teknik [1]. ' + sorry) == 'BINUS ASO adalah kampus teknik [1].'
+    assert strip_trailing_apology(sorry) == sorry  # A plain apology stays.
 
 
 def test_glossary_and_pronunciation_preserve_word_boundaries():

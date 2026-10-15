@@ -9,6 +9,22 @@ from llm import FALLBACK, UNIVERSITY_FALLBACK, OllamaChat, detect_language, is_m
 from memory import Memory
 
 
+APOLOGIES = {text for texts in (FALLBACK, UNIVERSITY_FALLBACK) for text in texts.values()}
+
+
+def without_apologies(history: list[dict]) -> list[dict]:
+    """After several apologies in a row the model tacked one onto good answers; they hold no facts."""
+    pairs = zip(history[::2], history[1::2])
+    return [turn for pair in pairs if pair[1]['content'].strip() not in APOLOGIES for turn in pair]
+
+
+def strip_trailing_apology(text: str) -> str:
+    for apology in APOLOGIES:
+        if text.rstrip().endswith(apology) and text.strip() != apology:
+            return text.rstrip()[:-len(apology)].rstrip()
+    return text
+
+
 @dataclass
 class Answer:
     text: str
@@ -164,6 +180,7 @@ class Assistant:
                 reserved = sum(len(turn['content']) for turn in name_turn)
                 history = name_turn + self.memory.recent(
                     self.settings.history_turns, self.settings.history_chars - reserved)
+        history = without_apologies(history)
         social = (bool(SOCIAL.match(question)) and not is_memory_request(question)
                   and not UNIVERSITY_TERMS.search(question) and not RELATED_TERMS.search(question))
         # "How's it going?" contains "it" but is not a follow-up about the previous program.
@@ -235,6 +252,7 @@ class Assistant:
                                         reference=query[len(question):].strip())
             else:
                 text = self.chat.answer(question, context, history, language, tools)
+        text = strip_trailing_apology(text)
         if text.strip() in (FALLBACK[language], UNIVERSITY_FALLBACK[language]):
             text = fallback
         self.memory.append(question, text)
