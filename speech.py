@@ -118,8 +118,6 @@ class Speech:
             str(audio_path), language=language, beam_size=5, temperature=0.0,
             vad_filter=True, vad_parameters={'min_silence_duration_ms': 300},
             condition_on_previous_text=False,
-            # The prompt already lists the vocabulary; passing hotwords too put it in the prompt twice,
-            # which made Whisper echo it after the visitor stopped ("BINUS ASO, BASE BASE BASE").
             initial_prompt=self.glossary.initial_prompt,
         )
         text = ' '.join(segment.text.strip() for segment in segments if segment.no_speech_prob < 0.6).strip()

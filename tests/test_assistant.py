@@ -120,7 +120,7 @@ def test_glossary_and_pronunciation_preserve_word_boundaries():
     assert glossary.normalize('ukmarine and database') == 'ukmarine and database'
     assert 'Unit Kegiatan Mahasiswa' in glossary.expand_query('UKM')
     assert glossary.pronounce('UKM BINUS ASO', 'id') == 'u ka em Binus Aso'
-    assert 'BINUS ASO' in glossary.hotwords
+    assert ',' not in glossary.initial_prompt  # A word list in the prompt gets echoed by Whisper.
     assert glossary.normalize_speech("UKM d'Binus ASO") == 'UKM di BINUS ASO'
 
 

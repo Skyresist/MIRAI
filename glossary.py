@@ -65,12 +65,10 @@ class Glossary:
         return ' '.join([normalized, *additions])
 
     @property
-    def hotwords(self) -> str:
-        return ', '.join([term['canonical'] for term in self.terms] + ['Unit Kegiatan Mahasiswa', 'mahasiswa', 'kampus'])
-
-    @property
     def initial_prompt(self) -> str:
-        return 'University questions in Indonesian or English. Vocabulary: ' + self.hotwords + '.'
+        # No vocabulary list: in the silence after a question Whisper repeated it ("AeroBASE, BASE").
+        # Misheard brand names are fixed afterwards by the aliases and speech_corrections instead.
+        return 'Pertanyaan pengunjung tentang kampus BINUS ASO.'
 
     def pronounce(self, text: str, language: str) -> str:
         text = self.normalize(text)
