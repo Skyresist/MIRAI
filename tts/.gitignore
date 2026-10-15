@@ -1,0 +1,12 @@
+# rebuilt by setup.sh
+rvc-venv/
+Applio/
+
+# voice models - not redistributed
+*.pth
+*.index
+models/
+
+# generated audio
+*.wav
+mc_test/

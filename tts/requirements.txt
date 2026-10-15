@@ -1,0 +1,2 @@
+kokoro==0.9.4
+onnxruntime==1.31.0
