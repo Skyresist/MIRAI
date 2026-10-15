@@ -51,13 +51,14 @@ if [[ "$browser" != true ]]; then
 fi
 
 export DISPLAY="${DISPLAY:-:0}"
-# Started at login, the browser can open before Ubuntu's sound system has found the USB mic; it then
-# keeps a silent placeholder input. Wait (up to 30 s) until a real microphone is listed.
+# Started at login, the browser can open before Ubuntu has found the USB mic and then keeps the
+# Jetson's built-in input, which records silence. Wait (up to 60 s) until the USB mic is the default.
 if command -v pactl >/dev/null 2>&1; then
-    for _ in $(seq 30); do
-        pactl list short sources 2>/dev/null | grep -v '\.monitor' | grep -q . && break
+    for _ in $(seq 60); do
+        pactl get-default-source 2>/dev/null | grep -qi usb && break
         sleep 1
     done
+    echo "Microphone: $(pactl get-default-source 2>/dev/null)"
 fi
 chrome="$(command -v chromium-browser || command -v chromium || command -v google-chrome || true)"
 if [[ -n "$chrome" ]]; then
