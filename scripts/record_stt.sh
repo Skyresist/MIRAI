@@ -20,6 +20,12 @@ questions=(
     'id	Ada UKM apa saja?'
     "en	What is D'BASE?"
     'en	Is there a kendo club?'
+    "id	Apa itu D'BASE?"
+    "id	Apa bedanya D'BASE dan BASE CORE?"
+    'id	Ceritakan tentang AeroBASE.'
+    "id	Saya suka desain, apa itu D'Sign?"
+    'id	HMB itu apa?'
+    'en	What if I like robotics more?'
     'id	TPKS itu apa?'
     'id	Ada jurusan apa aja?'
     'en	What do students learn in Automotive and Robotics Engineering?'

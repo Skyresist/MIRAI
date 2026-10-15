@@ -40,7 +40,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('folder', type=Path)
     parser.add_argument('--models', nargs='+', default=['base', 'small'])
-    parser.add_argument('--device', choices=['cpu', 'cuda', 'auto'], default='cpu')
+    parser.add_argument('--device', choices=['cpu', 'cuda', 'auto'], default=Settings().speech_device,
+                        help='Defaults to what the kiosk uses, so the timing matches.')
     args = parser.parse_args(argv)
     cases = [line.split('\t') for line in (args.folder / 'transcripts.tsv').read_text(encoding='utf-8').splitlines()
              if line.strip() and not line.startswith('#')]
