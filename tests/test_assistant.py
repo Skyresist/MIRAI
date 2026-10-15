@@ -122,6 +122,12 @@ def test_glossary_and_pronunciation_preserve_word_boundaries():
     assert glossary.pronounce('UKM BINUS ASO', 'id') == 'u ka em Binus Aso'
     assert ',' not in glossary.initial_prompt  # A word list in the prompt gets echoed by Whisper.
     assert glossary.normalize_speech("UKM d'Binus ASO") == 'UKM di BINUS ASO'
+    # How Whisper writes spoken club names and letter-by-letter abbreviations.
+    assert glossary.normalize_speech('Apa itu the base?') == "Apa itu D'BASE?"
+    assert glossary.normalize_speech('ikut di base dan aero beis') == "ikut D'BASE dan AeroBASE"
+    assert glossary.normalize_speech('Apa itu tepekaes dan u ka em?') == 'Apa itu TPKS dan UKM?'
+    # "di"/"the" before BASE CORE must not turn it into D'BASE.
+    assert glossary.normalize_speech('ikut di base core') == 'ikut BASE CORE'
 
 
 def test_language_detection_uses_words():

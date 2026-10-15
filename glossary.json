@@ -2,7 +2,6 @@
   "speech_corrections": {
     "d'binus aso": "di BINUS ASO",
     "d’binus aso": "di BINUS ASO",
-    "te pe ka es": "TPKS",
     "monozukuri lab": "Monozukuri Lab"
   },
   "terms": [
@@ -14,31 +13,59 @@
     },
     {
       "canonical": "UKM",
-      "aliases": ["ukm", "u k m", "u.k.m", "u ka em"],
+      "aliases": ["ukm", "u k m", "u.k.m", "u ka em", "u-ka-em", "ukaem", "uka em", "u kaem", "u k em", "you kay em"],
       "search": "Unit Kegiatan Mahasiswa organisasi mahasiswa klub komunitas student clubs",
       "pronunciation": {"id": "u ka em", "en": "U K M"}
     },
     {
       "canonical": "D'BASE",
-      "aliases": ["d'base", "d base", "d-base", "dbase", "dee base"],
+      "aliases": ["d'base", "d’base", "d base", "d-base", "dbase", "dee base", "the base", "the bass", "di base", "dibase",
+                  "de base", "debase", "di beis", "dibeis", "di bes", "dibes", "d beis", "d'beis", "di bass"],
       "search": "D'BASE UKM Unit Kegiatan Mahasiswa mobil hemat energi Shell Eco-marathon",
       "pronunciation": {"id": "di beis", "en": "D Base"}
     },
     {
       "canonical": "AeroBASE",
-      "aliases": ["aerobase", "aero base"],
+      "aliases": ["aerobase", "aero base", "aero-base", "aero beis", "aerobeis", "aero bes", "aero bass", "airobase",
+                  "airo base", "air base", "arrow base", "aero face"],
       "search": "AeroBASE UKM Unit Kegiatan Mahasiswa drone otonom KRTI",
       "pronunciation": {"id": "Aero Beis", "en": "Aero Base"}
     },
     {
       "canonical": "BASE CORE",
-      "aliases": ["base core", "basecore", "base-core"],
+      "aliases": ["base core", "basecore", "base-core", "beis kor", "bes kor", "base cor", "base kor", "basekor",
+                  "base court", "bass core",
+                  "di base core", "the base core", "di beis kor", "di base cor"],
       "search": "BASE CORE UKM robotika robot",
       "pronunciation": {"id": "Beis Kor", "en": "Base Core"}
     },
     {
+      "canonical": "D'Sign",
+      "aliases": ["d'sign", "d’sign", "d sign", "d-sign", "dsign", "di sign", "the sign", "di sain", "d sain"],
+      "search": "D'Sign UKM Unit Kegiatan Mahasiswa desain pemodelan 3D AutoCAD",
+      "pronunciation": {"id": "di sain", "en": "D Sign"}
+    },
+    {
+      "canonical": "HMB",
+      "aliases": ["hmb", "h m b", "h.m.b", "ha em be", "haembe", "ha-em-be"],
+      "search": "HMB Himpunan Mahasiswa BINUS ASO UKM organisasi mahasiswa",
+      "pronunciation": {"id": "ha em be", "en": "H M B"}
+    },
+    {
+      "canonical": "Kendo Club",
+      "aliases": ["kendo club", "kendo klub", "ken do club", "ken do klub", "kendobase", "kendo base"],
+      "search": "Kendo Club UKM seni bela diri Jepang kendo shinai",
+      "pronunciation": {"id": "Kendo Klab", "en": "Kendo Club"}
+    },
+    {
+      "canonical": "KRTI",
+      "aliases": ["krti", "k r t i", "k.r.t.i", "ka er te i", "kaerte i"],
+      "search": "KRTI Kontes Robot Terbang Indonesia AeroBASE drone kompetisi",
+      "pronunciation": {"id": "ka er te i", "en": "K R T I"}
+    },
+    {
       "canonical": "TPKS",
-      "aliases": ["tpks", "t p k s", "t.p.k.s"],
+      "aliases": ["tpks", "t p k s", "t.p.k.s", "te pe ka es", "tepekaes", "te-pe-ka-es", "tepe kaes", "t pks", "tpk s", "tpk es"],
       "search": "Tes Potensi Keberhasilan Studi TPKS tes masuk entrance test",
       "pronunciation": {"id": "te pe ka es", "en": "T P K S"}
     },
@@ -50,7 +77,7 @@
     },
     {
       "canonical": "ASO Japan Grant Scholarship",
-      "aliases": ["aso japan grant scholarship", "aso japan grant", "ajgs", "a j g s"],
+      "aliases": ["aso japan grant scholarship", "aso japan grant", "ajgs", "a j g s", "a je ge es", "ajegees"],
       "search": "ASO Japan Grant Scholarship AJGS beasiswa Development Fee Fixed Tuition Fee",
       "pronunciation": {"id": "Aso Japan Gran Skolarsip", "en": "ASO Japan Grant Scholarship"}
     },
