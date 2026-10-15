@@ -5,6 +5,8 @@ import re
 
 from config import ROOT
 
+SEPARATOR = r'[\s,.\-]*'
+
 
 class Glossary:
     def __init__(self, path: Path = ROOT / 'glossary.json'):
@@ -15,16 +17,22 @@ class Glossary:
             ((alias, term) for term in self.terms for alias in term['aliases']),
             key=lambda item: len(item[0]), reverse=True,
         )
-        self.aliases = {alias.casefold(): term for alias, term in aliases}
+        self.aliases = {self._key(alias): term for alias, term in aliases}
+        # Whisper writes spelled-out letters many ways ("Ha, em, be." / "ha-em-be" / "haembe"), so the
+        # parts of an alias may be joined by any spaces, commas, dots or dashes, or nothing.
         self.pattern = re.compile(
-            r'(?<!\w)(?:' + '|'.join(re.escape(alias) for alias, _ in aliases) + r')(?!\w)',
+            r'(?<!\w)(?:' + '|'.join(SEPARATOR.join(map(re.escape, alias.split())) for alias, _ in aliases) + r')(?!\w)',
             re.IGNORECASE,
         ) if aliases else None
+
+    @staticmethod
+    def _key(text: str) -> str:
+        return re.sub(SEPARATOR, '', text.casefold())
 
     def normalize(self, text: str) -> str:
         if self.pattern is None:
             return text
-        return self.pattern.sub(lambda match: self.aliases[match.group().casefold()]['canonical'], text)
+        return self.pattern.sub(lambda match: self.aliases[self._key(match.group())]['canonical'], text)
 
     def normalize_speech(self, text: str) -> str:
         for wrong, correct in self.corrections.items():

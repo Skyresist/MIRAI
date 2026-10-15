@@ -126,6 +126,14 @@ def test_glossary_and_pronunciation_preserve_word_boundaries():
     assert glossary.normalize_speech('Apa itu the base?') == "Apa itu D'BASE?"
     assert glossary.normalize_speech('ikut di base dan aero beis') == "ikut D'BASE dan AeroBASE"
     assert glossary.normalize_speech('Apa itu tepekaes dan u ka em?') == 'Apa itu TPKS dan UKM?'
+    # Spelled-out letters arrive with any punctuation between them.
+    for heard in ('Apa itu Ha, em, be?', 'Apa itu ha-em-be?', 'Apa itu Haembe?', 'Apa itu H. M. B.?'):
+        assert glossary.normalize_speech(heard).startswith('Apa itu HMB'), heard
+    assert glossary.normalize_speech('Te, pe, ka, es itu apa?') == 'TPKS itu apa?'
+    owners = {}
+    for term in glossary.terms:  # Ignoring separators must not make two names collide.
+        for alias in term['aliases']:
+            assert owners.setdefault(glossary._key(alias), term['canonical']) == term['canonical'], alias
     # "di"/"the" before BASE CORE must not turn it into D'BASE.
     assert glossary.normalize_speech('ikut di base core') == 'ikut BASE CORE'
 
