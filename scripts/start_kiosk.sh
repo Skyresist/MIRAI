@@ -51,6 +51,14 @@ if [[ "$browser" != true ]]; then
 fi
 
 export DISPLAY="${DISPLAY:-:0}"
+# Started at login, the browser can open before Ubuntu's sound system has found the USB mic; it then
+# keeps a silent placeholder input. Wait (up to 30 s) until a real microphone is listed.
+if command -v pactl >/dev/null 2>&1; then
+    for _ in $(seq 30); do
+        pactl list short sources 2>/dev/null | grep -v '\.monitor' | grep -q . && break
+        sleep 1
+    done
+fi
 chrome="$(command -v chromium-browser || command -v chromium || command -v google-chrome || true)"
 if [[ -n "$chrome" ]]; then
     # A cached copy of the old screen would hide UI updates (e.g. the cancel button) after an update.
