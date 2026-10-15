@@ -1,4 +1,5 @@
 """Optional local faster-whisper ASR and Piper VITS/eSpeak speech output."""
+from difflib import SequenceMatcher
 from pathlib import Path
 import re
 import shutil
@@ -96,7 +97,7 @@ class Speech:
                 model = str(local)
             self.whisper = WhisperModel(
                 model, device=device, compute_type='float16' if device == 'cuda' else 'int8',
-                cpu_threads=4, num_workers=1,
+                cpu_threads=self.settings.whisper_threads, num_workers=1,
             )
         return self.whisper
 
@@ -115,12 +116,15 @@ class Speech:
         if not Path(audio_path).is_file():
             raise FileNotFoundError(f'Audio file not found: {audio_path}')
         segments, info = self.load_whisper().transcribe(
-            str(audio_path), language=language, beam_size=5, temperature=0.0,
+            str(audio_path), language=language, beam_size=self.settings.whisper_beam, temperature=0.0,
             vad_filter=True, vad_parameters={'min_silence_duration_ms': 300},
             condition_on_previous_text=False,
             initial_prompt=self.glossary.initial_prompt,
         )
         text = ' '.join(segment.text.strip() for segment in segments if segment.no_speech_prob < 0.6).strip()
+        # On unclear audio Whisper may just copy its hint sentence; that is not the visitor's question.
+        if SequenceMatcher(None, text.casefold(), self.glossary.initial_prompt.casefold()).ratio() > 0.6:
+            text = ''
         if not text:
             raise ValueError('No speech detected; try a clearer recording or --language id/en.')
         return collapse_repeats(self.glossary.normalize_speech(text)), info.language if info.language in VOICES else 'en'

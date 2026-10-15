@@ -1,3 +1,4 @@
+from pathlib import Path
 from subprocess import CompletedProcess
 import sys
 from types import SimpleNamespace
@@ -78,6 +79,25 @@ def test_sentences_get_a_breathing_pause_and_language_tuning(tmp_path, monkeypat
     assert voice.synthesize.call_args.kwargs['syn_config'] == {}
     with wave.open(str(tmp_path / 'en.wav')) as wav:
         assert wav.getnframes() == 2  # English unchanged: no added pause
+
+
+@pytest.mark.parametrize('heard, expected', [
+    ('Singkatan kampus BINUS ASO yaitu UKM dan HMB dan TPKS.', None),  # Whisper copied its hint.
+    ('Singkatan kampus ASO yaitu UKM dan HMB.', None),
+    ('Saya mau tanya tentang UKM', 'Saya mau tanya tentang UKM'),
+    ('HMB itu apa?', 'HMB itu apa?'),
+])
+def test_a_copied_hint_counts_as_no_speech(heard, expected):
+    from glossary import Glossary
+    segment = SimpleNamespace(text=heard, no_speech_prob=0.1)
+    talker = Speech(SimpleNamespace(whisper_beam=1), Glossary())
+    talker.whisper = Mock(transcribe=Mock(return_value=([segment], SimpleNamespace(language='id'))))
+    audio = Path(__file__)  # Any existing file; the fake Whisper ignores it.
+    if expected is None:
+        with pytest.raises(ValueError):
+            talker.transcribe(audio, 'id')
+    else:
+        assert talker.transcribe(audio, 'id')[0] == expected
 
 
 def test_whisper_loops_are_collapsed():

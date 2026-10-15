@@ -33,6 +33,8 @@ class Settings:
     session: str = 'default'
     whisper_model: str = 'base'
     speech_device: str = 'cpu'
+    whisper_beam: int = 5  # 1 is about twice as fast; compare with scripts/eval_stt.py --beam.
+    whisper_threads: int = 4
     voices_dir: Path = ROOT / 'models/voices'
 
     def __post_init__(self):

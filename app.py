@@ -51,6 +51,8 @@ def parser():
     result.add_argument('--language', choices=['auto', 'id', 'en'], default='auto')
     result.add_argument('--speech-device', choices=['cpu', 'cuda', 'auto'], default='cpu')
     result.add_argument('--whisper-model', default='base', help='Model name or path to an already downloaded CTranslate2 model.')
+    result.add_argument('--whisper-beam', type=int, default=defaults.whisper_beam, help='1 is about twice as fast as 5.')
+    result.add_argument('--whisper-threads', type=int, default=defaults.whisper_threads)
     result.add_argument('--speak', type=Path, help='Write a Piper WAV answer; no sound device required.')
     result.add_argument('--play', action=argparse.BooleanOptionalAction, default=False,
                         help='Speak answers through the default system sound output. The start script enables this.')
@@ -91,6 +93,7 @@ def build_settings(arguments):
         num_ctx=arguments.num_ctx or (3072 if arguments.low_memory else defaults.num_ctx), think=arguments.think,
         glossary_path=arguments.glossary, whisper_model=arguments.whisper_model,
         speech_device=arguments.speech_device, voices_dir=arguments.voices_dir,
+        whisper_beam=arguments.whisper_beam, whisper_threads=arguments.whisper_threads,
     )
     if arguments.low_memory:
         settings.history_turns = 3

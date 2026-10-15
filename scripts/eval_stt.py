@@ -42,16 +42,19 @@ def main(argv=None):
     parser.add_argument('--models', nargs='+', default=['base', 'small'])
     parser.add_argument('--device', choices=['cpu', 'cuda', 'auto'], default=Settings().speech_device,
                         help='Defaults to what the kiosk uses, so the timing matches.')
+    parser.add_argument('--beam', type=int, default=Settings().whisper_beam, help='1 is about twice as fast as 5.')
+    parser.add_argument('--threads', type=int, default=Settings().whisper_threads)
     args = parser.parse_args(argv)
     cases = [line.split('\t') for line in (args.folder / 'transcripts.tsv').read_text(encoding='utf-8').splitlines()
              if line.strip() and not line.startswith('#')]
     glossary = Glossary()
     for model in args.models:
-        speech = Speech(replace(Settings(), whisper_model=model, speech_device=args.device), glossary)
+        speech = Speech(replace(Settings(), whisper_model=model, speech_device=args.device,
+                                whisper_beam=args.beam, whisper_threads=args.threads), glossary)
         speech.load_whisper()  # Exclude one-time loading from the per-clip timing.
         errors = total = 0
         seconds = []
-        print(f'\n=== whisper {model} ===')
+        print(f'\n=== whisper {model} (beam {args.beam}, {args.threads} threads, {args.device}) ===')
         for filename, language, expected in cases:
             started = time.perf_counter()
             try:

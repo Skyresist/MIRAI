@@ -77,7 +77,8 @@ class Glossary:
         # No comma-separated vocabulary list: in the silence after a question Whisper repeated it
         # ("AeroBASE, BASE"). One plain sentence still shows it the letter abbreviations it cannot spell
         # from Indonesian letter names ("ha em be"); other names are fixed afterwards by the aliases.
-        return 'Saya mau tanya tentang UKM dan HMB dan TPKS di BINUS ASO.'
+        # Worded unlike any visitor question, so a copied hint can be recognised and dropped.
+        return 'Singkatan kampus BINUS ASO yaitu UKM dan HMB dan TPKS.'
 
     def pronounce(self, text: str, language: str) -> str:
         text = self.normalize(text)
