@@ -100,4 +100,5 @@ def test_invalid_questions_are_rejected(client, payload):
 def test_ui_is_served(client):
     page = client.get('/')
     assert page.status_code == 200 and 'MIRAI' in page.text
+    assert client.get('/app.js').headers['cache-control'] == 'no-cache'  # Updates reach the kiosk screen.
     assert client.get('/api/status').json()['knowledge'] is True

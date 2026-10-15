@@ -112,6 +112,12 @@ def create_app(arguments, preload=True) -> FastAPI:
     api = FastAPI(title='MIRAI kiosk', lifespan=lifespan)
     api.state.kiosk = kiosk
 
+    @api.middleware('http')
+    async def always_fresh_ui(request, call_next):
+        response = await call_next(request)
+        response.headers['Cache-Control'] = 'no-cache'  # Chromium must load the updated screen after an update.
+        return response
+
     def busy():
         raise HTTPException(409, 'MIRAI is still answering the previous question.')
 

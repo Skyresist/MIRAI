@@ -45,6 +45,20 @@ ID_RESPELL_RE = re.compile(
     r'(?<!\w)(' + '|'.join(map(re.escape, sorted(ID_RESPELL, key=len, reverse=True))) + r')(?!\w)', re.I)
 
 
+def collapse_repeats(text: str) -> str:
+    """Whisper sometimes loops on a phrase ("BASE BASE BASE"): keep one copy of any phrase of up to
+    four words that repeats back to back."""
+    out = []
+    for word in text.split():
+        out.append(word)
+        keys = [w.strip(',.!?;:').casefold() for w in out]
+        for size in range(1, 5):
+            if len(out) >= 2 * size and keys[-size:] == keys[-2 * size:-size]:
+                del out[-size:]
+                break
+    return ' '.join(out)
+
+
 def respell_id(text: str) -> str:
     return ID_RESPELL_RE.sub(lambda match: ID_RESPELL[match[0].lower()], text)
 
@@ -105,11 +119,14 @@ class Speech:
             vad_filter=True, vad_parameters={'min_silence_duration_ms': 300},
             condition_on_previous_text=False,
             initial_prompt=self.glossary.initial_prompt, hotwords=self.glossary.hotwords,
+            # Every clip ends in ~1.2 s of room noise (the auto-stop wait); there Whisper tends to echo
+            # the vocabulary prompt ("BINUS ASO, BASE BASE BASE"). This skips such made-up text.
+            word_timestamps=True, hallucination_silence_threshold=0.5,
         )
         text = ' '.join(segment.text.strip() for segment in segments if segment.no_speech_prob < 0.6).strip()
         if not text:
             raise ValueError('No speech detected; try a clearer recording or --language id/en.')
-        return self.glossary.normalize_speech(text), info.language if info.language in VOICES else 'en'
+        return collapse_repeats(self.glossary.normalize_speech(text)), info.language if info.language in VOICES else 'en'
 
     def synthesize(self, text: str, output: Path, language: str = 'en', tuning: dict | None = None) -> Path:
         from piper import SynthesisConfig

@@ -80,6 +80,12 @@ def test_sentences_get_a_breathing_pause_and_language_tuning(tmp_path, monkeypat
         assert wav.getnframes() == 2  # English unchanged: no added pause
 
 
+def test_whisper_loops_are_collapsed():
+    assert speech.collapse_repeats('Ada UKM apa saja? BINUS ASO, BASE BASE BASE') == 'Ada UKM apa saja? BINUS ASO, BASE'
+    assert speech.collapse_repeats('BINUS ASO, BINUS ASO, BINUS ASO.') == 'BINUS ASO,'
+    assert speech.collapse_repeats('Apa itu BINUS ASO?') == 'Apa itu BINUS ASO?'
+
+
 def test_english_terms_are_respelled_for_the_indonesian_voice_only(tmp_path, monkeypatch):
     assert speech.respell_id('Jurusan Automotive & Robotics Engineering, pakai C++ dan AI.') == \
         'Jurusan otomotif en robotiks enjiniring, pakai si plas plas dan e ai.'
