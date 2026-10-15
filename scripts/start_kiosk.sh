@@ -67,10 +67,21 @@ if [[ -n "$chrome" ]]; then
         --renderer-process-limit=1 --disable-background-networking --disable-component-update \
         --disable-sync --disable-default-apps --js-flags=--max-old-space-size=128 &
 elif command -v firefox >/dev/null 2>&1; then
-    echo 'Chromium not found; Firefox kiosk will ask once for microphone permission.' >&2
-    # Same reason as above; covers both the apt and the snap Firefox.
-    rm -rf "$HOME"/.cache/mozilla/firefox/*/cache2 "$HOME"/snap/firefox/common/.cache/mozilla/firefox/*/cache2
-    firefox --kiosk "$url" &
+    # A kiosk-only profile that always allows the mic (Firefox's permission prompt is hidden in kiosk
+    # mode and its answer was lost after reboots) and lets answers play aloud. Snap Firefox may only
+    # use folders under ~/snap/firefox, so the profile goes there when Firefox is a snap.
+    profile="$HOME/.mirai-kiosk-firefox"
+    [[ -d "$HOME/snap/firefox" ]] && profile="$HOME/snap/firefox/common/mirai-kiosk"
+    mkdir -p "$profile"
+    cat > "$profile/user.js" <<'EOF'
+user_pref("media.navigator.permission.disabled", true);
+user_pref("permissions.default.microphone", 1);
+user_pref("media.autoplay.default", 0);
+user_pref("browser.sessionstore.resume_from_crash", false);
+EOF
+    # Same reason as the Chromium cache above.
+    rm -rf "$profile/cache2" "$HOME"/.cache/mozilla/firefox/*/cache2 "$HOME"/snap/firefox/common/.cache/mozilla/firefox/*/cache2
+    firefox --kiosk --no-remote --profile "$profile" "$url" &
 else
     echo "No browser found. Install one (sudo apt-get install chromium-browser) or open $url manually." >&2
 fi
