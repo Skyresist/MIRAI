@@ -23,9 +23,9 @@ SAMPLES = {
 # length_scale: >1 slower. noise_scale: tone variation (Piper default 0.667). noise_w_scale: rhythm
 # variation (default 0.8). pause: seconds of silence between sentences.
 PRESETS = {
-    'C (chosen: slower + livelier tone)': {'length_scale': 1.1, 'noise_scale': 0.8, 'noise_w_scale': 0.9, 'pause': 0.3},
-    'C+ (current default: more intonation)': {'length_scale': 1.1, 'noise_scale': 0.9, 'noise_w_scale': 0.9, 'pause': 0.3},
-    'C++ (even more; may start to wobble)': {'length_scale': 1.1, 'noise_scale': 1.0, 'noise_w_scale': 0.9, 'pause': 0.3},
+    'C (slower + livelier tone)': {'length_scale': 1.1, 'noise_scale': 0.8, 'noise_w_scale': 0.9, 'pause': 0.3},
+    'C+ (more intonation)': {'length_scale': 1.1, 'noise_scale': 0.9, 'noise_w_scale': 0.9, 'pause': 0.3},
+    'C++ (chosen default: most intonation)': {'length_scale': 1.1, 'noise_scale': 1.0, 'noise_w_scale': 0.9, 'pause': 0.3},
 }
 
 

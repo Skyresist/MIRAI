@@ -11,7 +11,7 @@ from glossary import Glossary
 VOICES = {'id': 'id_ID-news_tts-medium', 'en': 'en_US-lessac-medium'}
 # The news voice at Piper defaults reads too fast with no breath between sentences. length_scale > 1
 # is slower; noise_scale = intonation, noise_w_scale = rhythm variation (Piper defaults 0.667 / 0.8). Compare: scripts/try_voice.py.
-VOICE_TUNING = {'id': {'length_scale': 1.1, 'noise_scale': 0.9, 'noise_w_scale': 0.9, 'pause': 0.3}}
+VOICE_TUNING = {'id': {'length_scale': 1.1, 'noise_scale': 1.0, 'noise_w_scale': 0.9, 'pause': 0.3}}
 # The Indonesian voice reads English words with Indonesian letter rules ("Engineering" breaks apart),
 # so English terms from the FAQ are respelled the way an Indonesian speaker says them (c = "ch", sy = "sh").
 # Add a word here when it sounds wrong; keys are lowercase.
