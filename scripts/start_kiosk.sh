@@ -68,6 +68,8 @@ if [[ -n "$chrome" ]]; then
         --disable-sync --disable-default-apps --js-flags=--max-old-space-size=128 &
 elif command -v firefox >/dev/null 2>&1; then
     echo 'Chromium not found; Firefox kiosk will ask once for microphone permission.' >&2
+    # Same reason as above; covers both the apt and the snap Firefox.
+    rm -rf "$HOME"/.cache/mozilla/firefox/*/cache2 "$HOME"/snap/firefox/common/.cache/mozilla/firefox/*/cache2
     firefox --kiosk "$url" &
 else
     echo "No browser found. Install one (sudo apt-get install chromium-browser) or open $url manually." >&2
