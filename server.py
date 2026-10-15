@@ -51,6 +51,7 @@ class Kiosk:
         self.idle_timeout = arguments.idle_timeout
         self.last_activity = time.monotonic()
         self.lock = threading.Lock()
+        self.cancelled = threading.Event()  # The visitor tapped cancel while an answer was being generated.
         self.audio_dir = Path(tempfile.mkdtemp(prefix='mirai-audio-'))
         self.voice = not arguments.no_voice
         self._speech = None
@@ -122,17 +123,26 @@ def create_app(arguments, preload=True) -> FastAPI:
 
     @api.post('/api/ask')
     def ask(question: Question):
-        if not kiosk.lock.acquire(blocking=False):
+        # Ollama cannot be stopped mid-answer, so a question asked right after a cancel waits for
+        # the abandoned answer to finish instead of being turned away as busy.
+        if not (kiosk.lock.acquire(timeout=60) if kiosk.cancelled.is_set() else kiosk.lock.acquire(blocking=False)):
             busy()
+        kiosk.cancelled.clear()
         try:
             kiosk.touch()
             if 'who is the number one idol' in question.text.casefold():
                 return {'text': patch_response('K4N_7A'), 'sources': [], 'language': question.language or 'en'}
             answer = kiosk.assistant.ask(question.text, question.language)
+            if kiosk.cancelled.is_set():
+                # The visitor took the question back: it must not shape follow-up answers.
+                kiosk.visitor.memory.forget_last()
+                raise HTTPException(499, 'Cancelled by the visitor.')
             kiosk.visitor.after_answer(answer.language)
             sources = [{'source': source['source'], 'page': source.get('page'),
                         'question': source.get('question')} for source in answer.sources]
             return {'text': patch_response(answer.text), 'sources': sources, 'language': answer.language}
+        except HTTPException:
+            raise
         except ValueError as error:
             raise HTTPException(400, str(error))
         except Exception as error:
@@ -141,6 +151,12 @@ def create_app(arguments, preload=True) -> FastAPI:
         finally:
             kiosk.last_activity = time.monotonic()
             kiosk.lock.release()
+
+    @api.post('/api/cancel')
+    def cancel():
+        if kiosk.lock.locked():
+            kiosk.cancelled.set()
+        return {'ok': True}
 
     @api.post('/api/transcribe')
     def transcribe(audio: UploadFile = File(...), language: str = Form('auto')):

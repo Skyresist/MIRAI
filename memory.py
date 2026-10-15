@@ -40,6 +40,10 @@ class Memory:
         with self._connect() as db, db:
             db.execute('INSERT INTO turns(session, question, answer) VALUES (?, ?, ?)', (self.session, question, answer))
 
+    def forget_last(self):
+        with self._connect() as db, db:
+            db.execute('DELETE FROM turns WHERE id = (SELECT MAX(id) FROM turns WHERE session=?)', (self.session,))
+
     def recent(self, limit: int = 6, max_chars: int = 6000) -> list[dict]:
         with self._connect() as db:
             rows = db.execute('SELECT question, answer FROM turns WHERE session=? ORDER BY id DESC LIMIT ?',

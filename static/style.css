@@ -96,6 +96,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .mic.listening { background: var(--danger); }
 .mic.busy { background: var(--ink-muted); }
 .mic:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Shown only while listening, thinking or speaking: one tap takes the question back. */
+.cancel {
+  flex: none; min-height: var(--touch); padding: 0 var(--space-5); border-radius: var(--radius);
+  background: var(--surface); color: var(--danger); border: 2px solid var(--danger); font-weight: 700;
+}
+.cancel:active { background: var(--danger); color: var(--surface); }
 
 .idle-warning { position: fixed; inset: auto 0 0 0; padding: var(--space-5); background: var(--ink); color: var(--surface); text-align: center; }
 .idle-warning p { margin: 0; }

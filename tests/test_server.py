@@ -54,6 +54,25 @@ def test_reset_starts_a_fresh_visitor(client):
     assert client.seen[-1]['history'] == []
 
 
+def test_cancel_mid_answer_drops_the_question_from_memory(client, monkeypatch):
+    kiosk = client.app.state.kiosk
+    assert client.post('/api/cancel').json() == {'ok': True}  # Nothing running: no effect.
+    assert not kiosk.cancelled.is_set()
+    client.post('/api/ask', json={'text': 'Apa saja UKM?', 'language': 'id'})
+    answer = OllamaChat.answer
+
+    def cancelled_while_thinking(chat, *args, **kwargs):
+        client.post('/api/cancel')  # The visitor taps cancel while Qwen is still generating.
+        return answer(chat, *args, **kwargs)
+
+    monkeypatch.setattr(OllamaChat, 'answer', cancelled_while_thinking)
+    assert client.post('/api/ask', json={'text': 'Ada UKM robot?', 'language': 'id'}).status_code == 499
+    monkeypatch.setattr(OllamaChat, 'answer', answer)
+    assert client.post('/api/ask', json={'text': 'Apa saja UKM?', 'language': 'id'}).status_code == 200
+    asked = [turn['content'] for turn in client.seen[-1]['history'] if turn['role'] == 'user']
+    assert asked == ['Apa saja UKM?'], 'the cancelled question is forgotten'
+
+
 def test_transcribe_passes_screen_language_and_cleans_up(client):
     response = client.post('/api/transcribe', files={'audio': ('speech.webm', b'opus-bytes', 'audio/webm')},
                            data={'language': 'id'})
