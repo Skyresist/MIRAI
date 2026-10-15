@@ -74,9 +74,10 @@ class Glossary:
 
     @property
     def initial_prompt(self) -> str:
-        # No vocabulary list: in the silence after a question Whisper repeated it ("AeroBASE, BASE").
-        # Misheard brand names are fixed afterwards by the aliases and speech_corrections instead.
-        return 'Pertanyaan pengunjung tentang kampus BINUS ASO.'
+        # No comma-separated vocabulary list: in the silence after a question Whisper repeated it
+        # ("AeroBASE, BASE"). One plain sentence still shows it the letter abbreviations it cannot spell
+        # from Indonesian letter names ("ha em be"); other names are fixed afterwards by the aliases.
+        return 'Saya mau tanya tentang UKM dan HMB dan TPKS di BINUS ASO.'
 
     def pronounce(self, text: str, language: str) -> str:
         text = self.normalize(text)
