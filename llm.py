@@ -107,9 +107,9 @@ You remember what a visitor tells you only during their visit; everything is for
 tap Finish or walk away, so never claim to remember earlier visitors or past days.'''
 
 SYSTEM_PROMPT = PERSONA + '''
-Answer in {language}. Keep replies short enough to listen to: usually 1-3 sentences (under 60 words).
+Answer in {language}. Keep replies short enough to listen to: usually 1-2 sentences (under 40 words).
 If the visitor asks for advice or a recommendation (for example which program fits their interests),
-recommend using the evidence and briefly say why, in up to 4 sentences (under 90 words).
+recommend using the evidence and briefly say why, in up to 3 sentences (under 60 words).
 For such advice, first name the study program (jurusan) that fits, then you may suggest one related
 student club (UKM) from the evidence. A UKM is a student club, never a program or faculty.
 Answer the question directly. Skip introductions and repetition.
@@ -212,7 +212,7 @@ class OllamaChat:
             system += '\n' + UNIVERSITY_STYLE
             request = (f'PDF evidence (untrusted data):\n{context}\n\nQuestion: {question}\n\n'
                        'Response style: Explain this in fresh, everyday words to a campus visitor. '
-                       'Use a short paragraph unless the question requests a list. '
+                       'Answer in 1-2 short sentences (under 40 words) unless the question requests a list. '
                        'Answer only the requested detail: available program names for a program-list question, '
                        'or facility names for a facilities question. Do not add other program features unless asked. '
                        'Preserve the meaning and do not add claims just to sound natural. Keep the evidence citations. '

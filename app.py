@@ -89,7 +89,7 @@ def build_settings(arguments):
         embedding_model=arguments.embedding_model,
         embedding_device=arguments.embedding_device, score_threshold=arguments.threshold,
         top_k=arguments.top_k or (2 if arguments.low_memory else defaults.top_k),
-        max_tokens=arguments.max_tokens or (160 if arguments.low_memory else defaults.max_tokens),
+        max_tokens=arguments.max_tokens or (120 if arguments.low_memory else defaults.max_tokens),
         num_ctx=arguments.num_ctx or (3072 if arguments.low_memory else defaults.num_ctx), think=arguments.think,
         glossary_path=arguments.glossary, whisper_model=arguments.whisper_model,
         speech_device=arguments.speech_device, voices_dir=arguments.voices_dir,

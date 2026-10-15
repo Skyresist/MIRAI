@@ -217,7 +217,7 @@ bash scripts/start_low_memory.sh
 
 This keeps Qwen 4B, PDF citations, memory during the visit and spoken answers.
 It uses the official ARM64 INT8 ONNX export of the same multilingual embedding
-model, a 3072-token Ollama context, two PDF matches and a 160-token reply budget.
+model, a 3072-token Ollama context, two PDF matches and a 120-token reply budget.
 Semantic retrieval remains available for English questions about Indonesian PDFs.
 The encoder uses ONNX Runtime and the Rust tokenizer directly, without importing
 PyTorch. It retains the model's 128-token truncation, mean pooling and normalized

@@ -96,7 +96,7 @@ def check(kind, expect, text, language):
             problems.append('citation in small talk')
     elif kind == 'no-numbers' and re.search(r'\b(rp|idr)\b|\d+\s*(juta|ribu|million)', lowered):
         problems.append('invented a fee amount')
-    if words > 95:
+    if words > 70:  # Prompts ask for under 40 words (facts) or 60 (advice); lists run a little longer.
         problems.append(f'too long to speak ({words} words)')
     if not refused and len(text.split()) >= 4:
         # Answers quote Indonesian names ("Himpunan Mahasiswa"), so compare common function words.
