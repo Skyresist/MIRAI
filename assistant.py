@@ -33,17 +33,19 @@ class Answer:
 
 
 INTRODUCTION = {
-    'en': "I'm MIRAI, an AI assistant for BINUS ASO School of Engineering. "
-          'I help answer university questions in English and Indonesian using the available FAQ.',
-    'id': 'Saya MIRAI, asisten AI untuk BINUS ASO School of Engineering. '
-          'Saya membantu menjawab pertanyaan tentang universitas dalam bahasa Indonesia dan Inggris berdasarkan FAQ yang tersedia.',
+    'en': "I'm MIRAI, an AI guide robot here in the lobby of BINUS ASO School of Engineering. "
+          'Just talk to me or type, in English or Indonesian, and ask about majors, scholarships, '
+          'student clubs or how to register.',
+    'id': 'Saya MIRAI, robot pemandu AI di lobi BINUS ASO School of Engineering. '
+          'Kamu bisa bicara atau mengetik dalam bahasa Indonesia atau Inggris, lalu tanya soal jurusan, '
+          'beasiswa, UKM, atau cara mendaftar.',
 }
 IDENTITY_QUESTION = re.compile(
     r"(?:(?:hi|hello|halo|hai)[,!]?\s+)?(?:who are you|what are you|"
     r"what(?: is|'s) your name|introduce yourself|what can you do|"
     r"siapa (?:kamu|anda)|(?:kamu|anda) siapa|(?:apa|siapa) nama (?:kamu|anda)|"
     r"nama (?:kamu|anda) siapa|siapa namamu|perkenalkan (?:diri|dirimu)|apa tugasmu|"
-    r"(?:what|who) is mirai|tell me about mirai|(?:apa|siapa) (?:itu )?mirai|mirai (?:itu )?(?:apa|siapa))[?!. ]*", re.I)
+    r"(?:what|who) is mirai|tell me about mirai|(?:apa|siapa) (?:itu )?mirai|mirai (?:itu )?(?:apa|siapa))(?: (?:sih|ya|nih))?[?!. ]*", re.I)
 
 
 def select_context(results: list[dict], max_chars: int = 9000) -> tuple[str, list[dict]]:

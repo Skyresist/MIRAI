@@ -13,7 +13,7 @@ from config import Settings
     ('Halo, siapa Anda?', 'id'), ('Kamu siapa?', 'id'),
     ('Apa nama kamu?', 'id'), ('Siapa namamu?', 'id'),
     ('Perkenalkan dirimu.', 'id'), ('Apa tugasmu?', 'id'),
-    ('What is MIRAI?', 'en'), ('Apa itu MIRAI?', 'id'), ('MIRAI itu apa?', 'id'), ('Siapa MIRAI?', 'id'),
+    ('What is MIRAI?', 'en'), ('Apa itu MIRAI?', 'id'), ('MIRAI itu apa?', 'id'), ('Siapa MIRAI?', 'id'), ('MIRAI itu apa sih?', 'id'),
 ])
 def test_identity_answers_without_pdf_or_generation(question, language):
     retriever, chat = Mock(), Mock()
