@@ -10,6 +10,11 @@
   <!-- Welcome: a visitor chooses a language, which also tells Whisper what to expect. -->
   <section id="welcome" class="welcome" aria-labelledby="welcome-title">
     <div class="welcome-inner">
+      <div class="face small" data-mood="idle" aria-hidden="true">
+        <span class="eye left"></span><span class="eye right"></span>
+        <span class="cheek left"></span><span class="cheek right"></span>
+        <span class="mouth"></span>
+      </div>
       <p class="eyebrow">BINUS ASO School of Engineering</p>
       <h1 id="welcome-title">Halo! Saya <span class="brand">MIRAI</span>.<br><span class="sub">Hi! I'm MIRAI.</span></h1>
       <p class="lead">Pilih bahasa untuk mulai bertanya.<br><span class="sub">Choose a language to start.</span></p>
@@ -32,24 +37,43 @@
       </div>
     </header>
 
-    <ol id="messages" class="messages" aria-live="polite"></ol>
+    <section class="stage">
+      <div id="face" class="face" data-mood="idle" aria-hidden="true">
+        <span class="eye left"></span><span class="eye right"></span>
+        <span class="cheek left"></span><span class="cheek right"></span>
+        <span class="mouth"></span>
+      </div>
+      <!-- Only the latest question and answer are shown, as speech bubbles under the face. -->
+      <ol id="messages" class="messages" aria-live="polite"></ol>
+    </section>
 
     <div id="suggestions" class="suggestions" aria-label="Suggested questions"></div>
 
-    <footer class="composer">
+    <footer class="controls">
       <div id="status" class="status" role="status"></div>
-      <div class="composer-row">
-        <form id="text-form" class="text-form" autocomplete="off">
-          <input id="text" type="text" maxlength="500" data-i18n-placeholder="placeholder" aria-label="Question">
-          <button type="submit" class="send" data-i18n="send">Kirim</button>
-        </form>
-        <button id="cancel" class="cancel" type="button" hidden data-i18n="cancel">✕ Batal</button>
-        <button id="mic" class="mic" type="button" aria-label="Tap to talk">
+      <div class="control-row">
+        <button id="type" class="action type" type="button" aria-controls="keyboard" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm0 2v10h16V7H4Zm2 2h2v2H6V9Zm3 0h2v2H9V9Zm3 0h2v2h-2V9Zm3 0h3v2h-3V9ZM6 12h2v2H6v-2Zm3 0h6v2H9v-2Zm7 0h2v2h-2v-2Z"/></svg>
+          <span data-i18n="type">Ketik</span>
+        </button>
+        <button id="mic" class="action mic" type="button">
           <span class="mic-level" aria-hidden="true"></span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H8.5a1 1 0 1 0 0 2h7a1 1 0 1 0 0-2H13v-2.59a6 6 0 0 0 5-5.91Z"/></svg>
+          <span data-i18n="talk">Bicara</span>
         </button>
+        <button id="cancel" class="action cancel" type="button" hidden data-i18n="cancel">✕ Batal</button>
       </div>
     </footer>
+
+    <!-- On-screen keyboard: the kiosk has no physical keyboard. inputmode=none keeps the system one away. -->
+    <div id="keyboard" class="keyboard" hidden>
+      <form id="text-form" class="text-form" autocomplete="off">
+        <input id="text" type="text" maxlength="500" inputmode="none" data-i18n-placeholder="placeholder" aria-label="Question">
+        <button type="submit" class="send" data-i18n="send">Kirim</button>
+        <button type="button" id="close-keyboard" class="close-keyboard" aria-label="Close keyboard">✕</button>
+      </form>
+      <div id="keys" class="keys"></div>
+    </div>
   </main>
 
   <div id="idle-warning" class="idle-warning" hidden role="alertdialog" aria-live="assertive">

@@ -3,28 +3,28 @@
 
 const TEXT = {
   id: {
-    finish: 'Selesai', send: 'Kirim', cancel: '✕ Batal', placeholder: 'Ketik pertanyaan…',
+    finish: 'Selesai', send: 'Kirim', cancel: '✕ Batal', placeholder: 'Ketik pertanyaan…', talk: 'Bicara', type: 'Ketik',
     stillThere: 'Masih di sana? Sentuh layar untuk melanjutkan.',
-    greeting: 'Halo! Saya MIRAI. Silakan tekan tombol mikrofon lalu bicara, atau pilih pertanyaan di bawah.',
-    tapToTalk: 'Tekan mikrofon untuk bicara', listening: 'Mendengarkan… (tekan lagi untuk selesai)',
-    transcribing: 'Memproses suara…', thinking: 'MIRAI sedang berpikir', speaking: 'MIRAI berbicara… (tekan mikrofon untuk memotong)',
+    greeting: 'Halo! Saya MIRAI. Tekan Bicara lalu ajukan pertanyaan, tekan Ketik untuk mengetik, atau pilih pertanyaan di bawah.',
+    tapToTalk: 'Tekan Bicara untuk bertanya', listening: 'Mendengarkan… (tekan lagi untuk selesai)',
+    transcribing: 'Memproses suara…', thinking: 'MIRAI sedang berpikir', speaking: 'MIRAI berbicara… (tekan Bicara untuk memotong)',
     noSpeech: 'Maaf, saya tidak mendengar dengan jelas. Coba lagi lebih dekat ke mikrofon.',
     micBlocked: 'Mikrofon tidak tersedia. Silakan ketik pertanyaan Anda.',
     offline: 'MIRAI sedang tidak dapat menjawab. Silakan hubungi staf di sekitar.',
-    busy: 'Tunggu sebentar, MIRAI masih menjawab.', source: 'Sumber',
+    busy: 'Tunggu sebentar, MIRAI masih menjawab.',
     suggestions: ['Apa itu BINUS ASO?', 'Ada jurusan apa saja?', 'Apakah ada beasiswa?', 'Ada UKM apa saja?',
       'Kampusnya di mana?', 'Bagaimana cara mendaftar?', 'Fasilitasnya apa saja?', 'Harus bisa bahasa Jepang?'],
   },
   en: {
-    finish: 'Finish', send: 'Send', cancel: '✕ Cancel', placeholder: 'Type a question…',
+    finish: 'Finish', send: 'Send', cancel: '✕ Cancel', placeholder: 'Type a question…', talk: 'Talk', type: 'Type',
     stillThere: 'Still there? Touch the screen to continue.',
-    greeting: "Hi! I'm MIRAI. Tap the microphone and speak, or choose a question below.",
-    tapToTalk: 'Tap the microphone to talk', listening: 'Listening… (tap again when done)',
-    transcribing: 'Processing your voice…', thinking: 'MIRAI is thinking', speaking: 'MIRAI is speaking… (tap the mic to interrupt)',
+    greeting: "Hi! I'm MIRAI. Tap Talk and ask me something, tap Type to write it, or choose a question below.",
+    tapToTalk: 'Tap Talk to ask a question', listening: 'Listening… (tap again when done)',
+    transcribing: 'Processing your voice…', thinking: 'MIRAI is thinking', speaking: 'MIRAI is speaking… (tap Talk to interrupt)',
     noSpeech: "Sorry, I didn't catch that. Please try again closer to the microphone.",
     micBlocked: 'The microphone is unavailable. Please type your question.',
     offline: 'MIRAI cannot answer right now. Please ask nearby staff.',
-    busy: 'One moment, MIRAI is still answering.', source: 'Source',
+    busy: 'One moment, MIRAI is still answering.',
     suggestions: ['What is BINUS ASO?', 'What majors are offered?', 'Are there scholarships?', 'What student clubs are there?',
       'Where is the campus?', 'How do I register?', 'What facilities are there?', 'Do I need to speak Japanese?'],
   },
@@ -37,6 +37,72 @@ const recorder = new TapToTalkRecorder({
 });
 
 function t(key) { return TEXT[state.language][key]; }
+
+// The face shows what MIRAI is doing; a timed mood (happy, confused) falls back to idle.
+let faceTimer = null;
+function setFace(mood, ms = 0) {
+  clearTimeout(faceTimer);
+  $('#face').dataset.mood = mood;
+  if (ms) faceTimer = setTimeout(() => setFace('idle'), ms);
+}
+
+// On-screen keyboard: keys write into the text box; Shift capitalises the next letter only.
+const KEY_ROWS = [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+  ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"], ['shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'back'], [',', 'space', '.', '?']];
+let shift = false;
+
+function buildKeyboard() {
+  $('#keys').replaceChildren(...KEY_ROWS.map((row) => {
+    const line = document.createElement('div');
+    line.className = 'key-row';
+    line.append(...row.map((key) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `key${key === 'space' ? ' space' : key.length > 1 ? ' wide' : ''}`;
+      button.dataset.key = key;
+      button.textContent = { shift: '⇧', back: '⌫', space: ' ' }[key] ?? key;
+      if (key === 'back') button.setAttribute('aria-label', 'Backspace');
+      if (key === 'space') button.setAttribute('aria-label', 'Space');
+      if (key === 'shift') button.setAttribute('aria-label', 'Shift');
+      return button;
+    }));
+    return line;
+  }));
+}
+
+function pressKey(key) {
+  const input = $('#text');
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? start;
+  let insert = key === 'space' ? ' ' : key;
+  if (key === 'shift') { shift = !shift; return renderShift(); }
+  if (key === 'back') {
+    const from = start === end ? Math.max(0, start - 1) : start;
+    input.value = input.value.slice(0, from) + input.value.slice(end);
+    input.setSelectionRange(from, from);
+    return;
+  }
+  if (shift) { insert = insert.toUpperCase(); shift = false; renderShift(); }
+  if (input.value.length - (end - start) + insert.length > input.maxLength) return;
+  input.value = input.value.slice(0, start) + insert + input.value.slice(end);
+  input.setSelectionRange(start + insert.length, start + insert.length);
+}
+
+function renderShift() {
+  document.querySelectorAll('.key').forEach((button) => {
+    const key = button.dataset.key;
+    if (key === 'shift') button.classList.toggle('on', shift);
+    else if (key.length === 1) button.textContent = shift ? key.toUpperCase() : key;
+  });
+}
+
+function showKeyboard(open) {
+  $('#keyboard').hidden = !open;
+  $('#chat').classList.toggle('typing', open);
+  $('#type').setAttribute('aria-expanded', String(open));
+  if (open) { stopSpeaking(); $('#text').focus(); }
+  else { $('#text').value = ''; shift = false; renderShift(); }
+}
 
 function setStatus(message = t('tapToTalk'), isError = false) {
   $('#status').textContent = message;
@@ -64,17 +130,11 @@ function renderSuggestions() {
   }));
 }
 
-function addMessage(role, text, { sources = [], error = false } = {}) {
+function addMessage(role, text, { error = false } = {}) {
   const item = document.createElement('li');
   item.className = `message ${role}${error ? ' error' : ''}`;
-  // "[1]" markers mean nothing to a visitor; the Source line below already says where it came from.
+  // "[1]" citation markers mean nothing to a visitor, and the kiosk shows no source line.
   item.textContent = text.replace(/\s*\[\d+\]/g, '');
-  if (sources.length) {
-    const note = document.createElement('div');
-    note.className = 'sources';
-    note.textContent = `${t('source')}: ` + sources.map((source) => source.question || `${source.source} p. ${source.page}`).join(' · ');
-    item.append(note);
-  }
   $('#messages').append(item);
   item.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return item;
@@ -107,6 +167,7 @@ async function api(path, options = {}) {
 function stopSpeaking() {
   state.speaking = null;  // An answer still being synthesised must not start playing later.
   if (state.audio) { state.audio.pause(); state.audio = null; }
+  if ($('#face').dataset.mood === 'speaking') setFace('idle');
   updateCancel();
 }
 
@@ -123,6 +184,7 @@ function cancel() {
     state.undo = null;
     setBusy(false);
   }
+  setFace('idle');
   setStatus();
 }
 
@@ -142,9 +204,10 @@ async function speak(text, language) {
     state.audio = audio;
     updateCancel();
     setStatus(t('speaking'));
+    audio.onplaying = () => { if (state.audio === audio) setFace('speaking'); };
     audio.onended = audio.onpause = () => {
       URL.revokeObjectURL(url);
-      if (state.audio === audio) state.audio = null;
+      if (state.audio === audio) { state.audio = null; setFace('idle'); }
       updateCancel();
       if (!state.busy && !recorder.recording) setStatus();
       resetIdle();
@@ -167,6 +230,7 @@ async function ask(question) {
   state.abort = new AbortController();
   state.undo = () => { asked.remove(); pending.remove(); };
   setBusy(true);
+  setFace('thinking');
   setStatus(t('thinking'));
   try {
     const response = await api('/api/ask', {
@@ -176,8 +240,9 @@ async function ask(question) {
     const answer = await response.json();
     state.abort = state.undo = null;
     pending.remove();
-    addMessage('mirai', answer.text, { sources: answer.sources });
+    addMessage('mirai', answer.text);
     setBusy(false);
+    setFace('idle');
     setStatus();
     speak(answer.text, answer.language);
   } catch (error) {
@@ -186,6 +251,7 @@ async function ask(question) {
     pending.remove();
     addMessage('mirai', error.status === 409 ? t('busy') : t('offline'), { error: true });
     setBusy(false);
+    setFace('confused', 2500);
     // Visitors see the friendly message; the small status line tells staff what actually failed.
     if (error.status === 409) setStatus();
     else setStatus(`(${error.status || 'no connection'}) ${error.message}`.slice(0, 160), true);
@@ -202,22 +268,26 @@ async function onMic() {
   stopSpeaking();
   let result;
   try {
+    showKeyboard(false);
     $('#mic').classList.add('listening');
+    setFace('listening');
     setStatus(t('listening'));
     updateCancel();
     result = await recorder.record();
   } catch (error) {
     console.warn('Microphone error:', error);
+    setFace('confused', 2500);
     setStatus(t('micBlocked'), true);
     return;
   } finally {
     $('#mic').classList.remove('listening');
     updateCancel();
   }
-  if (!result) return setStatus();
-  if (!result.heardSpeech) return setStatus(t('noSpeech'), true);
+  if (!result) { setFace('idle'); return setStatus(); }
+  if (!result.heardSpeech) { setFace('confused', 2500); return setStatus(t('noSpeech'), true); }
   state.abort = new AbortController();
   setBusy(true);
+  setFace('thinking');
   setStatus(t('transcribing'));
   try {
     const form = new FormData();
@@ -226,12 +296,13 @@ async function onMic() {
     const transcript = await (await api('/api/transcribe', { method: 'POST', body: form, signal: state.abort.signal })).json();
     state.abort = null;
     setBusy(false);
-    if (!transcript.text) return setStatus(t('noSpeech'), true);
+    if (!transcript.text) { setFace('confused', 2500); return setStatus(t('noSpeech'), true); }
     await ask(transcript.text);
   } catch (error) {
     if (error.name === 'AbortError') return;
     state.abort = null;
     setBusy(false);
+    setFace('confused', 2500);
     setStatus(error.status === 503 ? t('micBlocked') : t('offline'), true);
   }
 }
@@ -241,6 +312,8 @@ async function endVisit() {
   clearTimeout(state.idleTimer); clearTimeout(state.warnTimer);
   recorder.cancel();
   stopSpeaking();
+  showKeyboard(false);
+  setFace('idle');
   $('#idle-warning').hidden = true;
   $('#messages').replaceChildren();
   $('#chat').hidden = true;
@@ -268,6 +341,7 @@ function startVisit(language) {
   $('#welcome').hidden = true;
   $('#chat').hidden = false;
   addMessage('mirai', t('greeting'));
+  setFace('happy', 2000);
   resetIdle();
   if (state.voice) recorder.open().catch(() => setStatus(t('micBlocked'), true));
 }
@@ -280,9 +354,20 @@ $('#cancel').addEventListener('click', cancel);
 $('#text-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const question = $('#text').value;
-  $('#text').value = '';
+  if (!question.trim() || state.busy) return;
+  showKeyboard(false);
   ask(question);
 });
+$('#type').addEventListener('click', () => { resetIdle(); showKeyboard($('#keyboard').hidden); });
+$('#close-keyboard').addEventListener('click', () => showKeyboard(false));
+// pointerdown + preventDefault: tapping a key must not take focus (and the caret) away from the text box.
+$('#keys').addEventListener('pointerdown', (event) => {
+  const key = event.target.closest('.key');
+  if (!key) return;
+  event.preventDefault();
+  pressKey(key.dataset.key);
+});
+buildKeyboard();
 ['pointerdown', 'keydown'].forEach((name) => document.addEventListener(name, () => { if (!$('#chat').hidden) resetIdle(); }, { passive: true }));
 
 api('/api/status').then((response) => response.json()).then((status) => {
