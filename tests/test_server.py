@@ -97,6 +97,15 @@ def test_invalid_questions_are_rejected(client, payload):
     assert client.post('/api/ask', json=payload).status_code == 422
 
 
+def test_kiosk_speech_settings_come_from_config():
+    # A hard-coded --whisper-model default once kept the kiosk on base after config switched to small.
+    from app import build_settings, parser
+    from config import Settings
+    settings, defaults = build_settings(parser().parse_args([])), Settings()
+    assert (settings.whisper_model, settings.whisper_beam, settings.whisper_threads, settings.min_confidence) == \
+        (defaults.whisper_model, defaults.whisper_beam, defaults.whisper_threads, defaults.min_confidence)
+
+
 def test_ui_is_served(client):
     page = client.get('/')
     assert page.status_code == 200 and 'MIRAI' in page.text

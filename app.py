@@ -47,12 +47,14 @@ def parser():
     result.add_argument('--glossary', type=Path, default=defaults.glossary_path)
     result.add_argument('--paperrag-index', type=Path, help='Use an existing trusted PaperRAG index instead of the built-in PDF loader.')
     result.add_argument('--retrieve-only', action='store_true', help='Show PDF matches without calling Ollama.')
-    result.add_argument('--audio', type=Path, help='Transcribe an audio file with faster-whisper base.')
+    result.add_argument('--audio', type=Path, help='Transcribe an audio file with faster-whisper.')
     result.add_argument('--language', choices=['auto', 'id', 'en'], default='auto')
     result.add_argument('--speech-device', choices=['cpu', 'cuda', 'auto'], default='cpu')
-    result.add_argument('--whisper-model', default='base', help='Model name or path to an already downloaded CTranslate2 model.')
+    result.add_argument('--whisper-model', default=defaults.whisper_model, help='Model name or path to an already downloaded CTranslate2 model.')
     result.add_argument('--whisper-beam', type=int, default=defaults.whisper_beam, help='1 is about twice as fast as 5.')
     result.add_argument('--whisper-threads', type=int, default=defaults.whisper_threads)
+    result.add_argument('--min-confidence', type=float, default=defaults.min_confidence,
+                        help='Ask to repeat below this Whisper score (see --verbose); -99 never asks.')
     result.add_argument('--speak', type=Path, help='Write a Piper WAV answer; no sound device required.')
     result.add_argument('--play', action=argparse.BooleanOptionalAction, default=False,
                         help='Speak answers through the default system sound output. The start script enables this.')
@@ -94,6 +96,7 @@ def build_settings(arguments):
         glossary_path=arguments.glossary, whisper_model=arguments.whisper_model,
         speech_device=arguments.speech_device, voices_dir=arguments.voices_dir,
         whisper_beam=arguments.whisper_beam, whisper_threads=arguments.whisper_threads,
+        min_confidence=arguments.min_confidence,
     )
     if arguments.low_memory:
         settings.history_turns = 3

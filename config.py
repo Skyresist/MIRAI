@@ -36,6 +36,9 @@ class Settings:
     speech_device: str = 'cpu'
     whisper_beam: int = 1  # 5 is about twice as slow; compare with scripts/eval_stt.py --beam.
     whisper_threads: int = 6
+    # Below this Whisper score the text has gone far off and the visitor is asked to repeat. Lenient on
+    # purpose: small-word slips still read fine to the LLM. Tune with the kiosk's --verbose log.
+    min_confidence: float = -1.5
     voices_dir: Path = ROOT / 'models/voices'
 
     def __post_init__(self):
