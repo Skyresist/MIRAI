@@ -44,7 +44,7 @@ def main(argv=None):
     parser.add_argument('--onnx-only', action='store_true', help='Download only the smaller semantic-search assets.')
     parser.add_argument('--model', default=BASE_MODEL)
     parser.add_argument('--embedding-model', default=Settings().embedding_model)
-    parser.add_argument('--whisper-model', choices=sorted(WHISPER), default='base')
+    parser.add_argument('--whisper-model', choices=sorted(WHISPER), default='small')
     parser.add_argument('--models-dir', type=Path, default=ROOT / 'models')
     args = parser.parse_args(argv)
     from embeddings import cached_asset, model_spec, onnx_files

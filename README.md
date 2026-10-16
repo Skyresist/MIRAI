@@ -163,7 +163,7 @@ For silent output, run `bash scripts/check_audio.sh --play` and inspect the defa
 sink, mute/volume, audio hardware and saved WAV. This script does not change your
 audio settings. Sound plays through a speaker/headset connected to the Jetson.
 
-- ASR: faster-whisper `base`, CPU int8, VAD enabled, previous-context conditioning
+- ASR: faster-whisper `small` (beam 1, 6 threads), CPU int8, VAD enabled, previous-context conditioning
   disabled, and university vocabulary supplied as initial-prompt/hotword hints.
 - Indonesian Piper voice: `id_ID-news_tts-medium`.
 - English Piper voice: `en_US-lessac-medium`.
@@ -176,8 +176,9 @@ and TTS. UKM, BINUS ASO, D'BASE and AeroBASE are included. Aliases match whole
 words. The glossary guides searches; it does not establish facts about clubs.
 Hints help but cannot guarantee accuracy on noisy recordings.
 
-If `base` still struggles, try `--whisper-model small` or supply a downloaded
-CTranslate2 model directory. The larger model trades speed/memory for accuracy.
+If the Jetson runs short of memory, `--whisper-model base` is about twice as fast
+but mishears far more (38% vs 20% word errors), or supply a downloaded CTranslate2
+model directory.
 An explicit `--language id` often helps campus questions.
 
 ## CUDA and TensorRT on Jetson

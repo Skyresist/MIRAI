@@ -31,10 +31,11 @@ class Settings:
     think: bool = False
     keep_alive: str | int = '10m'  # The kiosk server uses -1 so the first visitor never waits for a reload.
     session: str = 'default'
-    whisper_model: str = 'base'
+    # small: 20% word errors vs base's 38% on the kiosk recordings, ~4.8 s per clip with beam 1 on 6 cores.
+    whisper_model: str = 'small'
     speech_device: str = 'cpu'
-    whisper_beam: int = 5  # 1 is about twice as fast; compare with scripts/eval_stt.py --beam.
-    whisper_threads: int = 4
+    whisper_beam: int = 1  # 5 is about twice as slow; compare with scripts/eval_stt.py --beam.
+    whisper_threads: int = 6
     voices_dir: Path = ROOT / 'models/voices'
 
     def __post_init__(self):
