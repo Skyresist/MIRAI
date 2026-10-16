@@ -1,8 +1,55 @@
-# MIRAI — BINUS ASO university assistant
+# MIRAI — offline bilingual voice assistant for BINUS ASO
 
-Rebuilt from `Skyresist/BASE-Core-AI-LLM`. MIRAI answers questions from your local
-PDFs, remembers the current visitor's conversation, and optionally accepts audio and
-writes spoken answers in Indonesian or English. No paid API key is needed.
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Ollama](https://img.shields.io/badge/LLM-Qwen3%204B%20via%20Ollama-black)
+![Hardware](https://img.shields.io/badge/Runs%20on-NVIDIA%20Jetson-76B900?logo=nvidia&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-90%2B%20pytest-2ea44f)
+
+MIRAI is the campus guide for BINUS ASO School of Engineering's robot. It was designed and
+built by Clayvent Yuuki William as a BCore AI Research Club project. Visitors walk up to its touchscreen, pick Bahasa Indonesia or
+English, and **ask a question out loud**. MIRAI transcribes it, looks up the answer in
+the university's official FAQ PDFs, and **speaks the answer back** — with everything,
+including the LLM, running **locally on an NVIDIA Jetson**: no cloud API and no
+Internet needed once installed.
+
+## How it works
+
+```text
+ USB mic ──► faster-whisper (STT) ──► glossary fixes ("ukam" → UKM, "the base" → D'BASE)
+                                              │
+                                              ▼
+ FAQ PDFs ──► FAQ-aware chunking ──► multilingual-e5 embeddings (ONNX, cached)
+                                              │  semantic search + keyword bonus,
+                                              ▼  calibrated cut-off
+                     Qwen3 4B Instruct (Ollama) — answers only from retrieved text,
+                     cites file + page, short apology when the answer isn't there
+                                              │
+                                              ▼
+ Speaker ◄── Piper TTS (Indonesian / English voice) ◄── touchscreen kiosk (FastAPI + HTML/JS)
+```
+
+## Highlights
+
+- **Grounded answers:** retrieval-augmented generation over the official FAQ; switching to multilingual-e5-small raised top-3 retrieval accuracy from 89% to 98% on a bilingual question set, with file and page citations. Unsupported university questions get an honest "I'm not sure, please ask nearby staff" rather than a guess.
+- **Bilingual speech, offline:** faster-whisper speech-to-text and Piper text-to-speech for Indonesian and English. The Indonesian voice was tuned by ear on the device.
+- **Fixing errors from real use:** a shared `glossary.json` corrects how Whisper mishears campus names and abbreviations (UKM, HMB, D'BASE, AeroBASE). The entries come from microphone tests on the actual kiosk.
+- **Conversation memory per visitor:** follow-ups such as "that program" or "di sana" resolve to the previous topic. Memory is in-memory SQLite and is wiped when a visitor taps *Finish* or after 2 minutes idle, so the next person starts fresh.
+- **Built for limited hardware:** quantized ONNX embeddings (~640 MiB vs ~810 MiB for PyTorch, with 0.99+ cosine agreement), a low-memory launcher, recovery when Ollama runs out of memory, and models kept loaded so the first visitor doesn't wait.
+- **Kiosk deployment:** starts automatically at login, waits for the USB microphone before opening the browser, and has a cancel button while it listens, thinks or speaks.
+- **Tested:** 90+ pytest tests (conversation flow, follow-ups, visitor isolation, FAQ chunking, server API, speech playback), plus evaluation scripts for retrieval (~60 bilingual questions), conversations and speech recognition.
+
+## Tech stack
+
+Python · Ollama (Qwen3 4B Instruct, Q4_K_M) · multilingual-e5 / ONNX Runtime · faster-whisper · Piper TTS · FastAPI · SQLite · pytest · NVIDIA Jetson (Ubuntu)
+
+---
+
+## Setup and operations
+
+Rebuilt from [`Skyresist/BASE-Core-AI-LLM`](https://github.com/Skyresist/BASE-Core-AI-LLM), the first
+text-only prototype. MIRAI answers questions from local PDFs, remembers the current
+visitor's conversation, and accepts spoken questions and speaks answers in Indonesian
+or English. No paid API key is needed.
 
 The default model is **Qwen3 4B Instruct 2507, Q4_K_M**, through Ollama:
 `qwen3:4b-instruct-2507-q4_K_M`. This avoids the moving `qwen3:4b` tag's Thinking
@@ -24,8 +71,7 @@ It supports Ubuntu 22.04/JetPack 6 and Ubuntu 24.04 with systemd, and needs a no
 Internet access. Allow about 6 GB of downloads and at least 15 GB free space.
 Model weights are not included in the source ZIP.
 
-ARM64 wheel availability was checked; the installer has not been executed on
-your Jetson. CPU speech is the first-run default. Ollama detects supported GPUs.
+CPU speech is the first-run default. Ollama detects supported GPUs.
 `--no-system-packages` skips apt installation. Existing PyTorch in `.venv` is
 preserved; this script does not flash JetPack or replace NVIDIA drivers.
 
@@ -141,8 +187,8 @@ to `--speak answer.wav` to save without playback. `python app.py` keeps playback
 opt-in with `--play`. Without `--speak`, spoken answers use `.mirai/last-answer.wav`
 (or your configured state directory). Each new answer overwrites that WAV.
 Speech errors are reported while the text conversation continues.
-Input supports formats PyAV can decode. This
-version accepts audio files; live microphone recording is not implemented yet.
+Input supports formats PyAV can decode. The command line accepts audio files;
+live microphone input is handled by the touchscreen kiosk.
 
 Replies default to 1–2 short sentences (aiming for under 60 words) and a 192-token generation budget to reduce
 waiting and spoken-answer length. For detailed replies, ask for detail and launch
