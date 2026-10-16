@@ -66,7 +66,7 @@ bash scripts/install_jetson.sh
 
 The installer prepares Ubuntu prerequisites, `.venv`, CPU-compatible Python
 packages, Ollama 0.35.1 if absent, Qwen, multilingual embeddings, faster-whisper
-`base`, and both Piper voices. It then runs tests and the functional smoke check.
+`small`, and both Piper voices. It then runs tests and the functional smoke check.
 It supports Ubuntu 22.04/JetPack 6 and Ubuntu 24.04 with systemd, and needs a normal user with sudo and
 Internet access. Allow about 6 GB of downloads and at least 15 GB free space.
 Model weights are not included in the source ZIP.
