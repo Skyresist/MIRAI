@@ -25,6 +25,15 @@ def strip_trailing_apology(text: str) -> str:
     return text
 
 
+def strip_trailing_question(text: str) -> str:
+    """'Mau tahu lebih lanjut?' invites a bare 'iya', which names no topic to search; a 4B model still
+    adds one now and then. A reply that is only a question (a clarification) is kept."""
+    sentences = re.split(r'(?<=[.!?])\s+(?!\[)', text.strip())
+    if len(sentences) > 1 and re.sub(r'(?:\s*\[\d+\])+$', '', sentences[-1]).endswith('?'):
+        return ' '.join(sentences[:-1])
+    return text
+
+
 @dataclass
 class Answer:
     text: str
@@ -251,10 +260,10 @@ class Assistant:
             if social or (not sources and SOCIAL.match(question) and not is_memory_request(question)):
                 text = self.chat.answer(question, context, history, language, tools, social=True)
             elif query != question:
-                text = self.chat.answer(question, context, history, language, tools,
-                                        reference=query[len(question):].strip())
+                text = strip_trailing_question(self.chat.answer(question, context, history, language, tools,
+                                                                reference=query[len(question):].strip()))
             else:
-                text = self.chat.answer(question, context, history, language, tools)
+                text = strip_trailing_question(self.chat.answer(question, context, history, language, tools))
         text = strip_trailing_apology(text)
         if text.strip() in (FALLBACK[language], UNIVERSITY_FALLBACK[language]):
             text = fallback

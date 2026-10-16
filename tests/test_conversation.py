@@ -12,6 +12,18 @@ from retriever import Retriever
 from test_assistant import RecordingClient
 
 
+@pytest.mark.parametrize('reply, spoken', [
+    ('Kamu bisa ikut UKM D\'BASE yang membuat mobil hemat energi [1]. Apakah kamu mau tahu lebih lanjut?',
+     'Kamu bisa ikut UKM D\'BASE yang membuat mobil hemat energi [1].'),
+    ('BASE CORE explores robotics [1]. Want to know more? [1]', 'BASE CORE explores robotics [1].'),
+    ('Which program do you mean?', 'Which program do you mean?'),  # a clarification stays
+    ('There are four programs [1].', 'There are four programs [1].'),
+])
+def test_answers_never_end_by_baiting_a_yes(reply, spoken):
+    from assistant import strip_trailing_question
+    assert strip_trailing_question(reply) == spoken
+
+
 def assistant_with(hits=()):
     retriever = Mock()
     retriever.retrieve.return_value = list(hits)
