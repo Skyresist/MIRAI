@@ -115,6 +115,11 @@ SHORT_FOLLOWUP = re.compile(
 SOCIAL = re.compile(
     r"^\W*(?:(?:hi|hello|hey|halo|hai|hallo|pagi|siang|sore|malam|selamat \w+|good (?:morning|afternoon|evening)|"
     r"assalamu'?alaikum|permisi)\b[\w\s,!.']*$|"
+    # "Aku ada beberapa pertanyaan" announces a question without one; FAQ search on it found unrelated
+    # entries and the model invented a program. Whisper may misspell "pertanyaan".
+    r"(?:(?:aku|saya)\s+(?:ada|punya|mau)\s+(?:\w+\s+)?(?:perta\w*|tanya\w*)|boleh\s+(?:aku\s+|saya\s+)?tanya\w*|"
+    r"mau\s+tanya\w*|i\s+(?:have|got)\s+(?:a\s+|some\s+|a\s+few\s+)?questions?|"
+    r"can\s+i\s+ask(?:\s+you)?(?:\s+(?:a|some)\s+questions?)?)[\s,!.?]*$|"
     r".*\b(?:how are you|how(?:'s| is) it going|how do you do|what'?s up|apa kabar|gimana kabar|kabarmu|"
     r"thank(?:s| you)|makasih|terima ?kasih|thx|"
     r"bye|goodbye|see you|sampai jumpa|dadah|daah|"

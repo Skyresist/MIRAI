@@ -34,7 +34,9 @@ def assistant_with(hits=()):
 
 @pytest.mark.parametrize('question', ['How are you today?', 'Apa kabar?', 'Good morning!', 'Selamat pagi',
                                       'Are you a robot?', 'What is your favourite food?', 'Tell me a joke',
-                                      'Thanks MIRAI!', 'Terima kasih ya', 'Bye!', 'Aku deg-degan', "I'm nervous"])
+                                      'Thanks MIRAI!', 'Terima kasih ya', 'Bye!', 'Aku deg-degan', "I'm nervous",
+                                      'Aku ada beberapa pertanyaan', 'aku ada beberapa pertanayaan.', 'Boleh tanya?',
+                                      'Saya mau tanya', 'I have a few questions.', 'Can I ask you some questions?'])
 def test_small_talk_reaches_the_model_without_document_search(question):
     assistant, retriever, chat = assistant_with()
     answer = assistant.ask(question)
@@ -43,7 +45,8 @@ def test_small_talk_reaches_the_model_without_document_search(question):
     retriever.retrieve.assert_not_called()
 
 
-@pytest.mark.parametrize('question', ['Hi, how much does it cost?', 'Halo, ada beasiswa?', 'Thanks! What programs are there?'])
+@pytest.mark.parametrize('question', ['Hi, how much does it cost?', 'Halo, ada beasiswa?', 'Thanks! What programs are there?',
+                                      'Saya mau tanya, jurusannya apa saja?', 'I have a question about the fees'])
 def test_greeting_plus_university_question_still_uses_evidence(question):
     assistant, retriever, chat = assistant_with([{'source': 'faq.pdf', 'page': 1, 'text': 'Evidence.'}])
     assistant.ask(question)
