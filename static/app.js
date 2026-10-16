@@ -39,11 +39,29 @@ const recorder = new TapToTalkRecorder({
 function t(key) { return TEXT[state.language][key]; }
 
 // The face shows what MIRAI is doing; a timed mood (happy, confused) falls back to idle.
+// Any activity raises the eyes and mouth to make room for the bubble ("awake"); a while after
+// MIRAI goes idle the bubble fades and the face fills the screen again ("resting").
+const REST_AFTER_MS = 10000;
 let faceTimer = null;
+let restTimer = null;
 function setFace(mood, ms = 0) {
   clearTimeout(faceTimer);
   $('#face').dataset.mood = mood;
   if (ms) faceTimer = setTimeout(() => setFace('idle'), ms);
+  if (mood === 'idle') rest(); else wake();
+}
+
+function wake() {
+  clearTimeout(restTimer);
+  $('#chat').classList.remove('resting');
+}
+
+function rest() {
+  clearTimeout(restTimer);
+  restTimer = setTimeout(() => {
+    if (state.busy || state.audio || state.speaking || recorder.recording || !$('#keyboard').hidden) return rest();
+    $('#chat').classList.add('resting');
+  }, REST_AFTER_MS);
 }
 
 // On-screen keyboard: keys write into the text box; Shift capitalises the next letter only.
@@ -100,8 +118,8 @@ function showKeyboard(open) {
   $('#keyboard').hidden = !open;
   $('#chat').classList.toggle('typing', open);
   $('#type').setAttribute('aria-expanded', String(open));
-  if (open) { stopSpeaking(); $('#text').focus(); }
-  else { $('#text').value = ''; shift = false; renderShift(); }
+  if (open) { stopSpeaking(); wake(); $('#text').focus(); }
+  else { $('#text').value = ''; shift = false; renderShift(); rest(); }
 }
 
 function setStatus(message = t('tapToTalk'), isError = false) {
@@ -136,6 +154,8 @@ function addMessage(role, text, { error = false } = {}) {
   // "[1]" citation markers mean nothing to a visitor, and the kiosk shows no source line.
   item.textContent = text.replace(/\s*\[\d+\]/g, '');
   $('#messages').append(item);
+  wake();
+  if ($('#face').dataset.mood === 'idle') rest();
   item.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return item;
 }
@@ -314,6 +334,7 @@ async function endVisit() {
   stopSpeaking();
   showKeyboard(false);
   setFace('idle');
+  wake();  // The next visitor starts with the greeting visible.
   $('#idle-warning').hidden = true;
   $('#messages').replaceChildren();
   $('#chat').hidden = true;
@@ -359,6 +380,10 @@ $('#text-form').addEventListener('submit', (event) => {
   ask(question);
 });
 $('#type').addEventListener('click', () => { resetIdle(); showKeyboard($('#keyboard').hidden); });
+// Tapping the face while it is free makes MIRAI smile and shows the last answer again.
+$('#face').addEventListener('click', () => {
+  if ($('#face').dataset.mood === 'idle') setFace('happy', 1500);
+});
 $('#close-keyboard').addEventListener('click', () => showKeyboard(false));
 // pointerdown + preventDefault: tapping a key must not take focus (and the caret) away from the text box.
 $('#keys').addEventListener('pointerdown', (event) => {

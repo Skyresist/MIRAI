@@ -1,6 +1,6 @@
-/* Kiosk UI. Read from ~1 m away while standing: large type, large targets, no hover-only states. */
+/* Kiosk UI. Read from ~1 m away while standing: large type, large targets, no hover-only states.
+   The whole screen is MIRAI's face; bubbles and buttons float over it. */
 :root {
-  --bg: #eef3f9;
   --surface: #ffffff;
   --ink: #142033;
   --ink-muted: #5a6577;
@@ -12,6 +12,7 @@
   --visitor: #dbe8f7;
   --danger: #b42318;
   --head: #13294a;
+  --head-ink: #dce8f7;
   --eye: #7fe3ff;
   --cheek: #ff8fb1;
   --radius: 16px;
@@ -26,21 +27,81 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  background: var(--bg); color: var(--ink); font-size: var(--text); line-height: 1.45;
+  background: var(--head); color: var(--ink); font-size: var(--text); line-height: 1.45;
   overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
 [hidden] { display: none !important; }
 button { font: inherit; cursor: pointer; border: 0; }
 button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-/* Welcome */
-.welcome { height: 100%; display: grid; place-items: center; padding: var(--space-6); background: var(--brand); color: var(--brand-ink); text-align: center; }
-.welcome-inner { max-width: 52rem; display: flex; flex-direction: column; align-items: center; }
-.eyebrow { font-size: var(--text-small); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; margin: var(--space-5) 0 var(--space-3); }
-.welcome h1 { font-size: clamp(2.2rem, 1.4rem + 3.5vw, 4rem); line-height: 1.1; margin: 0 0 var(--space-4); }
+/* ---------- The face ----------
+   Features are sized in vmin so the face fills any screen shape. --eye-top / --mouth-top move the
+   features: centred while resting, raised while talking so the answer bubble fits underneath. */
+.face {
+  --eye-top: 26%; --mouth-top: 60%;
+  position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 40%, #1b3863 0%, var(--head) 70%);
+  transition: box-shadow 300ms ease;
+}
+.chat:not(.resting) .face { --eye-top: 9%; --mouth-top: 33%; }
+.face .eye, .face .cheek, .face .mouth { position: absolute; animation: float 4.5s ease-in-out infinite; }
+.face .eye {
+  top: var(--eye-top); width: 12vmin; height: 22vmin; border-radius: 999px; background: var(--eye);
+  box-shadow: 0 0 4vmin rgb(127 227 255 / 0.55);
+  animation: float 4.5s ease-in-out infinite, blink 5s infinite;
+  transition: top 450ms cubic-bezier(.3, 1.3, .5, 1), height 250ms ease, translate 250ms ease;
+}
+.face .eye.left { left: calc(50% - 22vmin); }
+.face .eye.right { left: calc(50% + 10vmin); }
+.face .cheek {
+  top: calc(var(--eye-top) + 21vmin); width: 11vmin; height: 4vmin; border-radius: 50%;
+  background: var(--cheek); opacity: 0.4; transition: top 450ms cubic-bezier(.3, 1.3, .5, 1), opacity 300ms ease;
+}
+.face .cheek.left { left: calc(50% - 36vmin); }
+.face .cheek.right { left: calc(50% + 25vmin); }
+.face .mouth {
+  top: var(--mouth-top); left: calc(50% - 8vmin); width: 16vmin; height: 8vmin;
+  border: 1.6vmin solid #fff; border-top: 0; border-radius: 0 0 999px 999px;
+  transition: top 450ms cubic-bezier(.3, 1.3, .5, 1), width 250ms ease, height 250ms ease, left 250ms ease;
+}
+@keyframes float { 50% { translate: 0 -1.2vmin; } }
+@keyframes blink { 0%, 46%, 50%, 100% { transform: scaleY(1); } 48% { transform: scaleY(0.08); } }
+
+/* Listening: wide eyes, round mouth, the screen edge glows. */
+.face[data-mood="listening"] { animation: listen-glow 1.4s ease-in-out infinite; }
+.face[data-mood="listening"] .eye { height: 25vmin; animation: float 4.5s ease-in-out infinite; }
+.face[data-mood="listening"] .mouth { width: 8vmin; height: 8vmin; left: calc(50% - 4vmin); border: 1.6vmin solid #fff; border-radius: 50%; }
+@keyframes listen-glow { 0%, 100% { box-shadow: inset 0 0 0 0.6rem rgb(232 115 12 / 0.9); } 50% { box-shadow: inset 0 0 0 1.6rem rgb(232 115 12 / 0.35); } }
+/* Thinking: eyes glance from side to side, mouth a small flat line. */
+.face[data-mood="thinking"] .eye { height: 18vmin; animation: glance 1.8s ease-in-out infinite; }
+.face[data-mood="thinking"] .mouth { width: 9vmin; height: 0; left: calc(50% - 4.5vmin); border-width: 1.6vmin 0 0 0; border-radius: 999px; }
+@keyframes glance { 0%, 100% { translate: -3vmin -2vmin; } 50% { translate: 3vmin -2vmin; } }
+/* Speaking: the mouth opens and closes. */
+.face[data-mood="speaking"] .mouth { background: #fff; border: 0; border-radius: 40% 40% 50% 50%; animation: talk 0.32s ease-in-out infinite alternate; }
+@keyframes talk { from { height: 3vmin; width: 13vmin; left: calc(50% - 6.5vmin); } to { height: 10vmin; width: 17vmin; left: calc(50% - 8.5vmin); } }
+/* Didn't catch that: squinting eyes, a crooked mouth. */
+.face[data-mood="confused"] .eye { height: 9vmin; translate: 0 6vmin; animation: none; }
+.face[data-mood="confused"] .eye.right { height: 13vmin; translate: 0 4vmin; }
+.face[data-mood="confused"] .mouth { width: 9vmin; height: 0; left: calc(50% - 4.5vmin); border-width: 1.6vmin 0 0 0; border-radius: 999px; rotate: 10deg; }
+/* Happy: smiling arc eyes and rosy cheeks (a visit starts, or someone taps the face). */
+.face[data-mood="happy"] .eye {
+  height: 9vmin; translate: 0 6vmin; background: transparent; box-shadow: none;
+  border: 1.8vmin solid var(--eye); border-bottom: 0; border-radius: 999px 999px 0 0; animation: none;
+}
+.face[data-mood="happy"] .cheek { opacity: 0.75; }
+
+/* ---------- Welcome: the face greets, language buttons below ---------- */
+.welcome { position: relative; height: 100%; color: var(--brand-ink); text-align: center; }
+.welcome .face { --eye-top: 12%; --mouth-top: 36%; }
+.welcome-inner {
+  position: absolute; inset: auto 0 0 0; z-index: 1; padding: var(--space-5) var(--space-6) var(--space-7);
+  display: flex; flex-direction: column; align-items: center;
+}
+.eyebrow { font-size: var(--text-small); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; margin: 0 0 var(--space-2); }
+.welcome h1 { font-size: clamp(2rem, 1.3rem + 3vw, 3.6rem); line-height: 1.1; margin: 0 0 var(--space-3); }
 .welcome .brand { color: var(--accent); }
 .sub { opacity: 0.75; font-weight: 400; font-size: 0.7em; }
-.lead { margin: 0 0 var(--space-6); }
+.lead { margin: 0 0 var(--space-5); }
 .language-choice { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-4); }
 .big-choice {
   min-height: calc(var(--touch) * 1.3); min-width: 16rem; padding: 0 var(--space-6);
@@ -48,116 +109,75 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 }
 .big-choice:active { background: var(--accent); color: var(--accent-ink); }
 
-/* Chat layout: face and latest answer in the middle, big talk/type buttons at the bottom. */
-.chat { height: 100%; display: flex; flex-direction: column; }
+/* ---------- Chat: everything floats above the face ---------- */
+.chat { position: relative; height: 100%; display: flex; flex-direction: column; }
+.chat > :not(.face) { position: relative; z-index: 1; }
 .topbar {
   flex: none; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
-  padding: var(--space-3) var(--space-5); background: var(--brand); color: var(--brand-ink);
+  padding: var(--space-3) var(--space-5); color: var(--head-ink);
 }
-.wordmark { font-weight: 800; letter-spacing: 0.06em; font-size: 1.4em; }
+.wordmark { font-weight: 800; letter-spacing: 0.06em; font-size: 1.2em; opacity: 0.6; }
 .topbar-actions { display: flex; gap: var(--space-3); align-items: center; }
-.segmented { display: flex; border: 2px solid rgb(255 255 255 / 0.5); border-radius: var(--radius); overflow: hidden; }
-.segmented button { min-height: 3.5rem; min-width: 4.5rem; background: transparent; color: var(--brand-ink); font-weight: 700; }
-.segmented button[aria-pressed="true"] { background: var(--brand-ink); color: var(--brand); }
+.segmented { display: flex; border: 2px solid rgb(255 255 255 / 0.4); border-radius: var(--radius); overflow: hidden; }
+.segmented button { min-height: 3.5rem; min-width: 4.5rem; background: transparent; color: var(--head-ink); font-weight: 700; }
+.segmented button[aria-pressed="true"] { background: var(--head-ink); color: var(--head); }
 .finish { min-height: 3.5rem; padding: 0 var(--space-5); border-radius: var(--radius); background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
+/* Taps on empty space fall through to the face (it smiles back). */
 .stage {
-  flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center;
-  gap: var(--space-4); padding: var(--space-5) var(--space-5) var(--space-3);
+  flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 0 var(--space-5) var(--space-3); pointer-events: none;
 }
-
-/* The face: a rounded screen-head with glowing eyes. data-mood drives every animation. */
-.face {
-  --size: min(30vh, 62vw);
-  position: relative; flex: none; width: var(--size); height: calc(var(--size) * 0.78);
-  background: var(--head); border-radius: 32% / 38%;
-  box-shadow: 0 0.6rem 0 rgb(15 59 110 / 0.18), inset 0 -0.5rem 0 rgb(255 255 255 / 0.06);
-  animation: float 4.5s ease-in-out infinite; transition: transform 300ms ease, width 300ms ease;
-}
-.face.small { --size: min(26vh, 50vw); box-shadow: 0 0 0 0.5rem rgb(255 255 255 / 0.12), 0 0 3rem rgb(127 227 255 / 0.25); }
-.face .eye {
-  position: absolute; top: 30%; width: 15%; height: 30%; border-radius: 999px; background: var(--eye);
-  box-shadow: 0 0 1.2rem rgb(127 227 255 / 0.6); animation: blink 5s infinite; transform-origin: center;
-  transition: transform 250ms ease, height 250ms ease, top 250ms ease;
-}
-.face .eye.left { left: 25%; }
-.face .eye.right { right: 25%; }
-.face .cheek { position: absolute; top: 58%; width: 13%; height: 7%; border-radius: 50%; background: var(--cheek); opacity: 0.45; }
-.face .cheek.left { left: 12%; }
-.face .cheek.right { right: 12%; }
-.face .mouth {
-  position: absolute; left: 50%; bottom: 17%; width: 20%; height: 11%; translate: -50% 0;
-  border: 0.45rem solid #fff; border-top: 0; border-radius: 0 0 999px 999px;
-  transition: width 250ms ease, height 250ms ease, border-radius 250ms ease;
-}
-@keyframes float { 50% { transform: translateY(-0.5rem); } }
-@keyframes blink { 0%, 46%, 50%, 100% { transform: scaleY(1); } 48% { transform: scaleY(0.1); } }
-
-/* Listening: wide eyes, a pulsing ring. */
-.face[data-mood="listening"] { animation: listen-ring 1.4s ease-out infinite; }
-.face[data-mood="listening"] .eye { height: 34%; top: 27%; animation: none; }
-.face[data-mood="listening"] .mouth { width: 12%; height: 12%; border: 0.45rem solid #fff; border-radius: 50%; }
-@keyframes listen-ring {
-  0% { box-shadow: 0 0 0 0 rgb(232 115 12 / 0.55); }
-  100% { box-shadow: 0 0 0 1.6rem rgb(232 115 12 / 0); }
-}
-/* Thinking: eyes glance from side to side, mouth a small flat line. */
-.face[data-mood="thinking"] .eye { animation: glance 1.8s ease-in-out infinite; height: 24%; top: 28%; }
-.face[data-mood="thinking"] .mouth { width: 14%; height: 0; border-width: 0.45rem 0 0 0; border-top: 0.45rem solid #fff; border-radius: 999px; }
-@keyframes glance { 0%, 100% { transform: translate(-25%, -10%); } 50% { transform: translate(25%, -10%); } }
-/* Speaking: the mouth opens and closes. */
-.face[data-mood="speaking"] .mouth { background: #fff; border: 0; border-radius: 40% 40% 50% 50%; animation: talk 0.32s ease-in-out infinite alternate; }
-@keyframes talk { from { height: 5%; width: 18%; } to { height: 16%; width: 22%; } }
-/* Didn't catch that: a puzzled tilt and squinting eyes. */
-.face[data-mood="confused"] { transform: rotate(-6deg); animation: none; }
-.face[data-mood="confused"] .eye { height: 14%; top: 36%; animation: none; }
-.face[data-mood="confused"] .mouth { width: 12%; height: 0; border-width: 0.45rem 0 0 0; border-top: 0.45rem solid #fff; border-radius: 999px; rotate: 8deg; }
-/* Happy: smiling eyes right after a visitor starts. */
-.face[data-mood="happy"] .eye { height: 16%; top: 34%; background: transparent; box-shadow: none; border: 0.45rem solid var(--eye); border-bottom: 0; border-radius: 999px 999px 0 0; animation: none; }
+.stage > * { pointer-events: auto; }
 
 /* Only the latest exchange is shown; older turns stay in the DOM for cancel/undo. */
 .messages {
-  list-style: none; margin: 0; padding: 0; width: min(56rem, 100%); min-height: 0; flex: 1;
+  list-style: none; margin: 0; padding: 0; width: min(56rem, 100%); max-height: 48vh;
   display: flex; flex-direction: column; gap: var(--space-3); overflow-y: auto;
+  transition: opacity 400ms ease, translate 400ms ease;
 }
+.chat.resting .messages, .chat.resting .suggestions { opacity: 0; translate: 0 1rem; pointer-events: none; }
 .message { display: none; max-width: 100%; padding: var(--space-4) var(--space-5); border-radius: var(--radius); white-space: pre-wrap; user-select: text; }
 .message:nth-last-child(-n + 2) { display: block; }
 .message.visitor { align-self: flex-end; background: var(--visitor); font-size: var(--text-small); color: var(--ink-muted); }
 .message.mirai {
-  position: relative; align-self: center; background: var(--surface); border: 2px solid var(--line);
-  box-shadow: 0 0.25rem 0 rgb(15 59 110 / 0.08); animation: pop 220ms ease-out;
+  position: relative; align-self: center; background: var(--surface); color: var(--ink);
+  box-shadow: 0 0.4rem 1.5rem rgb(0 0 0 / 0.25); animation: pop 220ms ease-out;
 }
-/* Bubble tail pointing up at the face. */
+/* Bubble tail pointing up at the mouth. */
 .message.mirai::before {
-  content: ''; position: absolute; top: -0.75rem; left: 50%; translate: -50% 0; width: 1.2rem; height: 1.2rem;
-  background: var(--surface); border-left: 2px solid var(--line); border-top: 2px solid var(--line); rotate: 45deg;
+  content: ''; position: absolute; top: -0.6rem; left: 50%; translate: -50% 0; width: 1.2rem; height: 1.2rem;
+  background: var(--surface); rotate: 45deg;
 }
-.message.error { border-color: var(--danger); color: var(--danger); }
+.message.error { color: var(--danger); }
 .message.thinking { color: var(--ink-muted); }
 @keyframes pop { from { opacity: 0; transform: scale(0.96) translateY(0.4rem); } }
 .dots::after { content: ''; animation: dots 1.2s steps(4) infinite; }
 @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
 
-.suggestions { flex: none; display: flex; gap: var(--space-3); padding: 0 var(--space-5) var(--space-3); overflow-x: auto; scrollbar-width: none; }
+.suggestions {
+  flex: none; display: flex; gap: var(--space-3); padding: 0 var(--space-5) var(--space-3); overflow-x: auto; scrollbar-width: none;
+  transition: opacity 400ms ease, translate 400ms ease;
+}
 .suggestions button {
   flex: none; min-height: 3.5rem; padding: 0 var(--space-5); border-radius: 999px;
-  background: var(--surface); color: var(--brand); border: 2px solid var(--brand); font-size: var(--text-small); font-weight: 600;
+  background: rgb(255 255 255 / 0.12); color: var(--head-ink); border: 2px solid rgb(255 255 255 / 0.35);
+  font-size: var(--text-small); font-weight: 600;
 }
-.suggestions button:active { background: var(--brand); color: var(--brand-ink); }
+.suggestions button:active { background: var(--head-ink); color: var(--head); }
 
-.controls { flex: none; padding: var(--space-2) var(--space-5) var(--space-5); background: var(--surface); border-top: 1px solid var(--line); }
-.status { min-height: 1.6em; font-size: var(--text-small); color: var(--ink-muted); margin-bottom: var(--space-2); text-align: center; }
-.status.error { color: var(--danger); }
+.controls { flex: none; padding: var(--space-2) var(--space-5) var(--space-5); }
+.status { min-height: 1.6em; font-size: var(--text-small); color: var(--head-ink); opacity: 0.85; margin-bottom: var(--space-2); text-align: center; }
+.status.error { color: #ffb4a8; opacity: 1; }
 .control-row { display: flex; justify-content: center; align-items: center; gap: var(--space-5); }
 
-/* Two distinct actions: talk (primary, round, orange) and type (secondary, navy). */
+/* Two distinct actions: talk (primary, round, orange) and type (secondary, light). */
 .action { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); font-weight: 700; }
 .action svg { width: 2.2rem; height: 2.2rem; fill: currentColor; position: relative; }
 .action span { position: relative; font-size: var(--text-small); }
 .mic {
   position: relative; width: calc(var(--touch) * 1.75); height: calc(var(--touch) * 1.75);
-  border-radius: 50%; background: var(--accent); color: var(--accent-ink);
-  box-shadow: 0 0.35rem 0 #b35400;
+  border-radius: 50%; background: var(--accent); color: var(--accent-ink); box-shadow: 0 0.35rem 0 #b35400;
 }
 .mic:active { translate: 0 0.2rem; box-shadow: 0 0.15rem 0 #b35400; }
 .mic svg { width: 2.8rem; height: 2.8rem; }
@@ -166,9 +186,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .mic.busy { background: var(--ink-muted); box-shadow: 0 0.35rem 0 #3b4352; }
 .type {
   width: calc(var(--touch) * 1.35); height: calc(var(--touch) * 1.35); border-radius: 28%;
-  background: var(--brand); color: var(--brand-ink); box-shadow: 0 0.3rem 0 #08254a;
+  background: var(--head-ink); color: var(--head); box-shadow: 0 0.3rem 0 #8fa3bf;
 }
-.type:active, .type[aria-expanded="true"] { translate: 0 0.2rem; box-shadow: 0 0.1rem 0 #08254a; }
+.type:active, .type[aria-expanded="true"] { translate: 0 0.2rem; box-shadow: 0 0.1rem 0 #8fa3bf; }
 /* Shown only while listening, thinking or speaking: one tap takes the question back. */
 .cancel {
   min-height: var(--touch); padding: 0 var(--space-5); border-radius: var(--radius);
@@ -176,10 +196,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 }
 .cancel:active { background: var(--danger); color: var(--surface); }
 
-/* On-screen keyboard. While it is open the face shrinks and suggestions hide to make room. */
-.chat.typing .face { --size: min(14vh, 40vw); }
-.chat.typing .suggestions, .chat.typing .controls { display: none; }
-.keyboard { flex: none; background: #dfe5ee; padding: var(--space-3); border-top: 1px solid var(--line); animation: slide-up 200ms ease-out; }
+/* ---------- On-screen keyboard (slides up over the lower face) ---------- */
+.chat.typing .suggestions, .chat.typing .controls, .chat.typing .messages { display: none; }
+.keyboard { flex: none; background: #dfe5ee; padding: var(--space-3); border-radius: var(--radius) var(--radius) 0 0; animation: slide-up 200ms ease-out; }
 @keyframes slide-up { from { transform: translateY(30%); opacity: 0; } }
 .text-form { display: flex; gap: var(--space-3); margin-bottom: var(--space-3); }
 .text-form input {
@@ -200,14 +219,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .key.space { max-width: 26rem; flex-grow: 5; }
 .key.on { background: var(--brand); color: var(--brand-ink); }
 
-.idle-warning { position: fixed; inset: auto 0 0 0; padding: var(--space-5); background: var(--ink); color: var(--surface); text-align: center; }
+.idle-warning { position: fixed; z-index: 2; inset: auto 0 0 0; padding: var(--space-5); background: var(--ink); color: var(--surface); text-align: center; }
 .idle-warning p { margin: 0; }
 
 @media (max-width: 640px) {
   .key { min-height: 3rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .face, .face .eye, .face .mouth, .message.mirai, .keyboard { animation: none !important; }
+  .face, .face .eye, .face .cheek, .face .mouth, .message.mirai, .keyboard { animation: none !important; transition: none !important; }
   .dots::after { animation: none; content: '...'; }
   .mic-level { transition: none; }
 }
