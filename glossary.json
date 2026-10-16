@@ -11,6 +11,11 @@
   },
   "terms": [
     {
+      "canonical": "MIRAI",
+      "aliases": ["mirai", "miray", "mirae", "mirei", "mi rai", "mi-rai", "mirrai", "me rai", "mii rai"],
+      "search": "MIRAI"
+    },
+    {
       "canonical": "BINUS ASO",
       "aliases": ["binus aso", "binus asso", "bina aso", "binus a so", "binus-aso", "binusaso", "binus also", "binus as so"],
       "search": "BINUS ASO School of Engineering kampus university",

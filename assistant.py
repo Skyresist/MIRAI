@@ -42,7 +42,8 @@ IDENTITY_QUESTION = re.compile(
     r"(?:(?:hi|hello|halo|hai)[,!]?\s+)?(?:who are you|what are you|"
     r"what(?: is|'s) your name|introduce yourself|what can you do|"
     r"siapa (?:kamu|anda)|(?:kamu|anda) siapa|(?:apa|siapa) nama (?:kamu|anda)|"
-    r"nama (?:kamu|anda) siapa|siapa namamu|perkenalkan (?:diri|dirimu)|apa tugasmu)[?!. ]*", re.I)
+    r"nama (?:kamu|anda) siapa|siapa namamu|perkenalkan (?:diri|dirimu)|apa tugasmu|"
+    r"(?:what|who) is mirai|tell me about mirai|(?:apa|siapa) (?:itu )?mirai|mirai (?:itu )?(?:apa|siapa))[?!. ]*", re.I)
 
 
 def select_context(results: list[dict], max_chars: int = 9000) -> tuple[str, list[dict]]:

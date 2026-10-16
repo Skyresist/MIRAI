@@ -13,6 +13,7 @@ from config import Settings
     ('Halo, siapa Anda?', 'id'), ('Kamu siapa?', 'id'),
     ('Apa nama kamu?', 'id'), ('Siapa namamu?', 'id'),
     ('Perkenalkan dirimu.', 'id'), ('Apa tugasmu?', 'id'),
+    ('What is MIRAI?', 'en'), ('Apa itu MIRAI?', 'id'), ('MIRAI itu apa?', 'id'), ('Siapa MIRAI?', 'id'),
 ])
 def test_identity_answers_without_pdf_or_generation(question, language):
     retriever, chat = Mock(), Mock()
@@ -25,6 +26,12 @@ def test_identity_answers_without_pdf_or_generation(question, language):
     chat.answer.assert_not_called()
     assert assistant.memory.recent()[-2]['content'] == question
     assistant.memory.close()
+
+
+def test_misheard_mirai_is_corrected():
+    from glossary import Glossary
+    assert Glossary().normalize_speech('Apa itu Miray?') == 'Apa itu MIRAI?'
+    assert Glossary().normalize_speech('Halo mi-rai') == 'Halo MIRAI'
 
 
 def test_identity_obeys_explicit_language_and_preserves_user_name():
