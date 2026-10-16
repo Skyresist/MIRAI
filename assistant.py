@@ -34,6 +34,28 @@ def strip_trailing_question(text: str) -> str:
     return text
 
 
+# BINUS ASO has exactly three majors. The model once invented "teknik sipil", so an answer naming a
+# major the FAQ never mentions is replaced by the real list. The FAQ does name fields the programs
+# combine (Mechanical, Electrical, Computer, Industrial Engineering), so those stay allowed.
+PROGRAMS = {
+    'en': 'BINUS ASO has three majors: Automotive & Robotics Engineering, Product Design Engineering '
+          'and Business Engineering.',
+    'id': 'BINUS ASO punya tiga jurusan: Automotive & Robotics Engineering, Product Design Engineering, '
+          'dan Business Engineering.',
+}
+FAQ_ENGINEERING = {'automotive', 'robotics', 'design', 'business', 'mechanical', 'electrical', 'industrial', 'computer', 'of'}
+OTHER_MAJOR = re.compile(
+    r'\b(?:teknik\s+(?:sipil|kimia|arsitektur|lingkungan|geologi|perkapalan|nuklir|biomedis|pertambangan|'
+    r'perminyakan|informatika|telekomunikasi|material|fisika|pangan|pertanian|penerbangan|dirgantara)|'
+    r'informatika|ilmu komputer|arsitektur|architecture|kedokteran|medicine|farmasi|pharmacy|'
+    r'akuntansi|accounting|psikologi|psychology)\b', re.I)
+
+
+def names_other_major(text: str) -> bool:
+    return bool(OTHER_MAJOR.search(text) or any(
+        word.lower() not in FAQ_ENGINEERING for word in re.findall(r'\b([A-Z]\w+)\s+Engineering\b', text)))
+
+
 @dataclass
 class Answer:
     text: str
@@ -281,6 +303,8 @@ class Assistant:
             else:
                 text = strip_trailing_question(self.chat.answer(asked, context, history, language, tools))
         text = strip_trailing_apology(text)
+        if names_other_major(text):
+            text = PROGRAMS[language]
         if text.strip() in (FALLBACK[language], UNIVERSITY_FALLBACK[language]):
             text = fallback
         self.memory.append(question, text)

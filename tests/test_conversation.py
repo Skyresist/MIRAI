@@ -5,7 +5,7 @@ import ollama
 import pytest
 
 import llm
-from assistant import Assistant
+from assistant import PROGRAMS, Assistant
 from config import Settings
 from llm import FALLBACK, UNIVERSITY_FALLBACK, OllamaChat, complete_sentences
 from retriever import Retriever
@@ -30,6 +30,21 @@ def test_an_earlier_interest_travels_with_a_later_request_for_advice():
     assistant.ask('Bisa bantu aku memilih jurusan yang cocok?')
     assert chat.answer.call_args.args[0] == 'Bisa bantu aku memilih jurusan yang cocok? (aku suka mobil)'
     assert assistant.memory.recent()[-2]['content'] == 'Bisa bantu aku memilih jurusan yang cocok?'
+
+
+@pytest.mark.parametrize('reply, locked', [
+    ('Ya, kamu bisa ikut program teknik sipil di BINUS ASO.', True),
+    ('You could study Civil Engineering or Software Engineering.', True),
+    ('Kamu juga bisa belajar informatika.', True),
+    ('Automotive & Robotics Engineering combines Computer Science, Mechanical Engineering and Electrical Engineering [1].', False),
+    ('Business Engineering is accredited under Industrial Engineering at BINUS ASO School of Engineering.', False),
+    ('Kamu belajar teknik dasar sketsa di Product Design Engineering.', False),
+])
+def test_only_the_three_real_majors_are_ever_named(reply, locked):
+    assistant, _, chat = assistant_with([{'source': 'faq.pdf', 'page': 1, 'text': 'Evidence.'}])
+    chat.answer.return_value = reply
+    language = 'id' if ' kamu ' in f' {reply.lower()} ' else 'en'
+    assert (assistant.ask('Jurusan apa yang cocok?', language).text == PROGRAMS[language]) == locked
 
 
 def assistant_with(hits=()):
