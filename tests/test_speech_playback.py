@@ -89,7 +89,7 @@ def test_sentences_get_a_breathing_pause_and_language_tuning(tmp_path, monkeypat
 ])
 def test_a_copied_hint_counts_as_no_speech(heard, expected):
     from glossary import Glossary
-    segment = SimpleNamespace(text=heard, no_speech_prob=0.1)
+    segment = SimpleNamespace(text=heard, no_speech_prob=0.1, avg_logprob=-0.3)
     talker = Speech(SimpleNamespace(whisper_beam=1), Glossary())
     talker.whisper = Mock(transcribe=Mock(return_value=([segment], SimpleNamespace(language='id'))))
     audio = Path(__file__)  # Any existing file; the fake Whisper ignores it.
@@ -98,6 +98,19 @@ def test_a_copied_hint_counts_as_no_speech(heard, expected):
             talker.transcribe(audio, 'id')
     else:
         assert talker.transcribe(audio, 'id')[0] == expected
+
+
+@pytest.mark.parametrize('confidence, kept', [(-0.4, True), (-1.3, False)])
+def test_an_unsure_transcript_asks_the_visitor_to_repeat(confidence, kept):
+    from glossary import Glossary
+    segment = SimpleNamespace(text='Kepa saja kata stari', no_speech_prob=0.1, avg_logprob=confidence)
+    talker = Speech(SimpleNamespace(whisper_beam=1), Glossary())
+    talker.whisper = Mock(transcribe=Mock(return_value=([segment], SimpleNamespace(language='id'))))
+    if kept:
+        assert talker.transcribe(Path(__file__), 'id')[0]
+    else:
+        with pytest.raises(ValueError):
+            talker.transcribe(Path(__file__), 'id')
 
 
 def test_whisper_loops_are_collapsed():

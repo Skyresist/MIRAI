@@ -1,5 +1,6 @@
 """Optional local faster-whisper ASR and Piper VITS/eSpeak speech output."""
 from difflib import SequenceMatcher
+import logging
 from pathlib import Path
 import re
 import shutil
@@ -9,7 +10,11 @@ import wave
 from config import Settings
 from glossary import Glossary
 
+logger = logging.getLogger('mirai.speech')
 VOICES = {'id': 'id_ID-news_tts-medium', 'en': 'en_US-lessac-medium'}
+# Whisper's own cut-off for unreliable text: below it a slurred question became a different question,
+# and asking the visitor to repeat beats answering something they never asked.
+MIN_CONFIDENCE = -1.0
 # The news voice at Piper defaults reads too fast with no breath between sentences. length_scale > 1
 # is slower; noise_scale = intonation, noise_w_scale = rhythm variation (Piper defaults 0.667 / 0.8). Compare: scripts/try_voice.py.
 VOICE_TUNING = {'id': {'length_scale': 1.1, 'noise_scale': 1.0, 'noise_w_scale': 0.9, 'pause': 0.3}}
@@ -121,7 +126,12 @@ class Speech:
             condition_on_previous_text=False,
             initial_prompt=self.glossary.initial_prompt,
         )
-        text = ' '.join(segment.text.strip() for segment in segments if segment.no_speech_prob < 0.6).strip()
+        segments = [segment for segment in segments if segment.no_speech_prob < 0.6]
+        text = ' '.join(segment.text.strip() for segment in segments).strip()
+        confidence = sum(segment.avg_logprob for segment in segments) / len(segments) if segments else 0.0
+        logger.info('Heard %r (confidence %.2f)', text, confidence)
+        if confidence < MIN_CONFIDENCE:
+            text = ''
         # On unclear audio Whisper may just copy its hint sentence; that is not the visitor's question.
         if SequenceMatcher(None, text.casefold(), self.glossary.initial_prompt.casefold()).ratio() > 0.6:
             text = ''
