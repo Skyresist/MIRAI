@@ -102,8 +102,11 @@ ELLIPSIS = re.compile(
     r'^(and|what about|how about|bagaimana dengan|kalau|lalu|terus)\b', re.I)
 ADVICE = re.compile(
     r"\b(i like|i love|i enjoy|i'?m interested|interested in|suka|senang|tertarik|hobi|hobby|hobbies|"
-    r"cocok|should i|sebaiknya|recommend|rekomendasi|saran|fits? me|pilih)\b", re.I)
-PROGRAM_OVERVIEW_QUERY = 'Program studi apa saja yang ditawarkan BINUS ASO? What study programs are offered?'
+    r"cocok|should i|sebaiknya|recommend|rekomendasi|saran|fits? me|suits? me|pilih|memilih|milih|"
+    r"pick|choose|decide|tentukan|menentukan)\b", re.I)
+INTEREST = re.compile(
+    r"\b(i like|i love|i enjoy|i'?m interested|interested in|suka|senang|tertarik|hobi|hobby|hobbies)\b", re.I)
+PROGRAM_OVERVIEW_QUERY ='Program studi apa saja yang ditawarkan BINUS ASO? What study programs are offered?'
 # Vague continuations that only make sense with the previous topic ("What about more for learning?"),
 # unlike a new subject ("What about the weather?").
 CONTINUATION = re.compile(
@@ -204,6 +207,14 @@ class Assistant:
         query, university, needs_topic = (question, False, False) if social else conversation_query(question, history)
         fallback = UNIVERSITY_FALLBACK[language] if university else FALLBACK[language]
         sources, cited, pinned = [], [], set()
+        # "Help me choose a major" after "aku suka mobil": the 4B model often lost the earlier interest
+        # and listed every program, so it travels with the question (search and model; memory keeps the original).
+        asked = question
+        if ADVICE.search(question) and not INTEREST.search(question):
+            interest = next((turn['content'] for turn in reversed(history)
+                             if turn['role'] == 'user' and INTEREST.search(turn['content'])), None)
+            if interest:
+                asked = f'{question} ({interest})'
 
         def search_documents(query: str) -> str:
             """Search local university PDFs. Use for university facts or a follow-up topic."""
@@ -246,7 +257,7 @@ class Assistant:
                 # "I like robotics, which major?" needs the overview of all programs (fixed query: the
                 # visitor's words pulled in look-alike FAQs) AND the club matching their interest.
                 searches += [(PROGRAM_OVERVIEW_QUERY, True),
-                             (question + ' UKM Unit Kegiatan Mahasiswa klub', True)]
+                             (asked + ' UKM Unit Kegiatan Mahasiswa klub', True)]
             for text, pin_best in searches:
                 context = search(text, pin_best)
         memory_or_chat = re.search(
@@ -268,7 +279,7 @@ class Assistant:
                 text = strip_trailing_question(self.chat.answer(question, context, history, language, tools,
                                                                 reference=query[len(question):].strip()))
             else:
-                text = strip_trailing_question(self.chat.answer(question, context, history, language, tools))
+                text = strip_trailing_question(self.chat.answer(asked, context, history, language, tools))
         text = strip_trailing_apology(text)
         if text.strip() in (FALLBACK[language], UNIVERSITY_FALLBACK[language]):
             text = fallback

@@ -24,6 +24,14 @@ def test_answers_never_end_by_baiting_a_yes(reply, spoken):
     assert strip_trailing_question(reply) == spoken
 
 
+def test_an_earlier_interest_travels_with_a_later_request_for_advice():
+    assistant, _, chat = assistant_with([{'source': 'faq.pdf', 'page': 1, 'text': 'Evidence.'}])
+    assistant.memory.append('aku suka mobil', 'Kamu bisa kuliah di Automotive & Robotics Engineering.')
+    assistant.ask('Bisa bantu aku memilih jurusan yang cocok?')
+    assert chat.answer.call_args.args[0] == 'Bisa bantu aku memilih jurusan yang cocok? (aku suka mobil)'
+    assert assistant.memory.recent()[-2]['content'] == 'Bisa bantu aku memilih jurusan yang cocok?'
+
+
 def assistant_with(hits=()):
     retriever = Mock()
     retriever.retrieve.return_value = list(hits)
