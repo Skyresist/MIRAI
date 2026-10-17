@@ -167,11 +167,22 @@ function renderSuggestions() {
   }));
 }
 
+const BRAILLE = /[⠀-⣿]/;
+const BRAILLE_LINES = /^.*[⠀-⣿].*$/gm;  // The voice must not read a drawing.
+
 function addMessage(role, text, { error = false, greeting = false } = {}) {
   const item = document.createElement('li');
   item.className = `message ${role}${error ? ' error' : ''}${greeting ? ' greeting' : ''}`;
   // "[1]" citation markers mean nothing to a visitor, and the kiosk shows no source line.
   item.textContent = text.replace(/\s*\[\d+\]/g, '');
+  // A picture drawn in braille dots (the secret.py easter egg) gets its own view: words on top, art below.
+  if (BRAILLE.test(text)) {
+    const lines = text.split('\n');
+    item.classList.add('art');
+    item.replaceChildren(
+      Object.assign(document.createElement('p'), { textContent: lines.filter((line) => line.trim() && !BRAILLE.test(line)).join('\n') }),
+      Object.assign(document.createElement('pre'), { textContent: lines.filter((line) => BRAILLE.test(line)).join('\n') }));
+  }
   $('#messages').append(item);
   updateAnswering();
   return item;
@@ -252,7 +263,7 @@ async function speak(text, language) {
   if (!state.voice) return;
   const token = state.speaking = {};
   updateCancel();
-  const sentences = text.replace(/\s*\[\d+\]/g, '').split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim());
+  const sentences = text.replace(/\s*\[\d+\]/g, '').replace(BRAILLE_LINES, '').split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim());
   const synthesize = (sentence) => api('/api/speak', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: sentence, language }),
   }).then((response) => response.blob());
