@@ -3,11 +3,14 @@
 
 const TEXT = {
   id: {
-    finish: 'Selesai', send: 'Kirim', cancel: '✕ Batal', placeholder: 'Ketik pertanyaan…', talk: 'Bicara', type: 'Ketik',
+    finish: 'Selesai', send: 'Kirim', cancel: '✕ Batal', placeholder: 'Ketik pertanyaan…', talk: 'Mulai bertanya', type: 'Ketik',
+    stopTalking: 'Selesai bicara', topics: 'Topik populer', close: 'Tutup', typeLabel: 'Ketik pertanyaanmu',
+    languageItem: 'Bahasa - ID', volume: 'Volume', touchStart: 'Sentuh layar untuk memulai',
+    welcome: 'Halo! Aku MIRAI, siap membantu mencari informasi tentang BINUS ASO.',
     stillThere: 'Masih di sana? Sentuh layar untuk melanjutkan.',
-    greeting: 'Halo! Saya MIRAI. Tekan Bicara lalu ajukan pertanyaan, tekan Ketik untuk mengetik, atau pilih pertanyaan di bawah.',
-    tapToTalk: 'Tekan Bicara untuk bertanya', listening: 'Mendengarkan… (tekan lagi untuk selesai)',
-    transcribing: 'Memproses suara…', thinking: 'MIRAI sedang berpikir', speaking: 'MIRAI berbicara… (tekan Bicara untuk memotong)',
+    greeting: 'Halo! Aku bisa membantu mencari informasi tentang BINUS ASO. Tekan Mulai Bertanya, ketik, atau pilih Topik Populer.',
+    tapToTalk: 'Tekan Mulai Bertanya untuk bertanya', listening: 'Aku mendengarkan… tekan Selesai Bicara kalau sudah',
+    transcribing: 'Memproses suara…', thinking: 'Sebentar, aku sedang mencari jawabannya', speaking: 'MIRAI sedang menjawab… tekan tombol oranye untuk memotong',
     noSpeech: 'Maaf, saya tidak mendengar dengan jelas. Coba lagi lebih dekat ke mikrofon.',
     micBlocked: 'Mikrofon tidak tersedia. Silakan ketik pertanyaan Anda.',
     offline: 'MIRAI sedang tidak dapat menjawab. Silakan hubungi staf di sekitar.',
@@ -16,11 +19,14 @@ const TEXT = {
       'Kampusnya di mana?', 'Bagaimana cara mendaftar?', 'Fasilitasnya apa saja?', 'Harus bisa bahasa Jepang?'],
   },
   en: {
-    finish: 'Finish', send: 'Send', cancel: '✕ Cancel', placeholder: 'Type a question…', talk: 'Talk', type: 'Type',
+    finish: 'Finish', send: 'Send', cancel: '✕ Cancel', placeholder: 'Type a question…', talk: 'Start asking', type: 'Type',
+    stopTalking: 'Done talking', topics: 'Popular topics', close: 'Close', typeLabel: 'Type your question',
+    languageItem: 'Language - EN', volume: 'Volume', touchStart: 'Touch the screen to start',
+    welcome: "Hi! I'm MIRAI, here to help you find information about BINUS ASO.",
     stillThere: 'Still there? Touch the screen to continue.',
-    greeting: "Hi! I'm MIRAI. Tap Talk and ask me something, tap Type to write it, or choose a question below.",
-    tapToTalk: 'Tap Talk to ask a question', listening: 'Listening… (tap again when done)',
-    transcribing: 'Processing your voice…', thinking: 'MIRAI is thinking', speaking: 'MIRAI is speaking… (tap Talk to interrupt)',
+    greeting: 'Hi! I can help you find information about BINUS ASO. Tap Start Asking, type, or pick a Popular Topic.',
+    tapToTalk: 'Tap Start Asking to ask a question', listening: "I'm listening… tap Done Talking when you finish",
+    transcribing: 'Processing your voice…', thinking: 'One moment, I am looking for the answer', speaking: 'MIRAI is answering… tap the orange button to interrupt',
     noSpeech: "Sorry, I didn't catch that. Please try again closer to the microphone.",
     micBlocked: 'The microphone is unavailable. Please type your question.',
     offline: 'MIRAI cannot answer right now. Please ask nearby staff.',
@@ -31,7 +37,7 @@ const TEXT = {
 };
 
 const $ = (selector) => document.querySelector(selector);
-const state = { language: 'id', busy: false, audio: null, idleTimer: null, warnTimer: null, idleSeconds: 120, voice: true, abort: null, undo: null, speaking: null };
+const state = { language: 'id', busy: false, audio: null, idleTimer: null, warnTimer: null, idleSeconds: 120, voice: true, abort: null, undo: null, speaking: null, volume: 1 };
 const recorder = new TapToTalkRecorder({
   onLevel: (level) => { $('.mic-level').style.borderWidth = `${Math.round(level * 18)}px`; $('.mic-level').style.inset = `${-Math.round(level * 18)}px`; },
 });
@@ -39,30 +45,39 @@ const recorder = new TapToTalkRecorder({
 function t(key) { return TEXT[state.language][key]; }
 
 // The face shows what MIRAI is doing; a timed mood (happy, confused) falls back to idle.
-// Any activity raises the eyes and mouth to make room for the bubble ("awake"); a while after
-// MIRAI goes idle the bubble fades and the face fills the screen again ("resting").
-const REST_AFTER_MS = 10000;
+// It never moves or resizes: only the eyes change.
 let faceTimer = null;
-let restTimer = null;
 function setFace(mood, ms = 0) {
   clearTimeout(faceTimer);
   $('#face').dataset.mood = mood;
   if (ms) faceTimer = setTimeout(() => setFace('idle'), ms);
-  if (mood === 'idle') rest(); else wake();
+  updateAnswering();
 }
 
-function wake() {
-  clearTimeout(restTimer);
-  $('#chat').classList.remove('resting');
+// While MIRAI shows an answer, the answer fills the face box and the eyes move to its top-right
+// corner; listening, thinking or a puzzled look bring the full face back.
+function updateAnswering() {
+  const last = $('#messages').lastElementChild;
+  const answer = last && last.matches('.mirai:not(.thinking):not(.greeting)');
+  $('#canvas').classList.toggle('answering', Boolean(answer) && ['idle', 'speaking', 'happy'].includes($('#face').dataset.mood));
 }
 
-function rest() {
-  clearTimeout(restTimer);
-  restTimer = setTimeout(() => {
-    if (state.busy || state.audio || state.speaking || recorder.recording || !$('#keyboard').hidden) return rest();
-    $('#chat').classList.add('resting');
-  }, REST_AFTER_MS);
+// The staff design draws everything on a 1366 x 769 canvas; scale it to fit whatever screen this is.
+function fitCanvas() {
+  document.documentElement.style.setProperty('--scale', Math.min(innerWidth / 1366, innerHeight / 769));
 }
+
+// The "..." menu and the popular topics open above the buttons; opening one closes the other.
+function togglePopup(button, popup, open = popup.hidden) {
+  [[$('#more'), $('#menu')], [$('#topics'), $('#suggestions')]].forEach(([b, p]) => {
+    p.hidden = !(open && p === popup);
+    b.setAttribute('aria-expanded', String(!p.hidden));
+  });
+}
+const closePopups = () => togglePopup($('#more'), $('#menu'), false);
+
+const VOLUMES = [1, 0.7, 0.4];
+function renderVolume() { $('#volume-label').textContent = `${t('volume')} ${Math.round(state.volume * 100)}%`; }
 
 // On-screen keyboard: keys write into the text box; Shift capitalises the next letter only.
 const KEY_ROWS = [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
@@ -117,9 +132,10 @@ function renderShift() {
 function showKeyboard(open) {
   $('#keyboard').hidden = !open;
   $('#chat').classList.toggle('typing', open);
+  $('#more').hidden = open;  // It would cover the keyboard's corner.
   $('#type').setAttribute('aria-expanded', String(open));
-  if (open) { stopSpeaking(); wake(); $('#text').focus(); }
-  else { $('#text').value = ''; shift = false; renderShift(); rest(); }
+  if (open) { stopSpeaking(); closePopups(); $('#text').focus(); }
+  else { $('#text').value = ''; shift = false; renderShift(); }
 }
 
 function setStatus(message = t('tapToTalk'), isError = false) {
@@ -132,7 +148,7 @@ function applyLanguage(language) {
   document.documentElement.lang = language;
   document.querySelectorAll('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
   document.querySelectorAll('[data-i18n-placeholder]').forEach((node) => { node.placeholder = t(node.dataset.i18nPlaceholder); });
-  document.querySelectorAll('.segmented button').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.language === language)));
+  renderVolume();
   renderSuggestions();
   if (!state.busy && !recorder.recording) setStatus();
 }
@@ -143,20 +159,18 @@ function renderSuggestions() {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = question;
-    button.addEventListener('click', () => ask(question));
+    button.addEventListener('click', () => { closePopups(); ask(question); });
     return button;
   }));
 }
 
-function addMessage(role, text, { error = false } = {}) {
+function addMessage(role, text, { error = false, greeting = false } = {}) {
   const item = document.createElement('li');
-  item.className = `message ${role}${error ? ' error' : ''}`;
+  item.className = `message ${role}${error ? ' error' : ''}${greeting ? ' greeting' : ''}`;
   // "[1]" citation markers mean nothing to a visitor, and the kiosk shows no source line.
   item.textContent = text.replace(/\s*\[\d+\]/g, '');
   $('#messages').append(item);
-  wake();
-  if ($('#face').dataset.mood === 'idle') rest();
-  $('#messages').scrollTop = $('#messages').scrollHeight;
+  updateAnswering();
   return item;
 }
 
@@ -213,6 +227,7 @@ function play(blob) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    audio.volume = state.volume;
     state.audio = audio;
     updateCancel();
     setStatus(t('speaking'));
@@ -311,6 +326,7 @@ async function onMic() {
   try {
     showKeyboard(false);
     $('#mic').classList.add('listening');
+    $('#mic-label').textContent = t('stopTalking');
     setFace('listening');
     setStatus(t('listening'));
     updateCancel();
@@ -322,6 +338,7 @@ async function onMic() {
     return;
   } finally {
     $('#mic').classList.remove('listening');
+    $('#mic-label').textContent = t('talk');
     updateCancel();
   }
   if (!result) { setFace('idle'); return setStatus(); }
@@ -354,12 +371,14 @@ async function endVisit() {
   recorder.cancel();
   stopSpeaking();
   showKeyboard(false);
-  setFace('idle');
-  wake();  // The next visitor starts with the greeting visible.
+  setFace('sleeping');
+  closePopups();
+  applyLanguage('id');  // The next visitor starts in Indonesian; the menu switches.
   $('#idle-warning').hidden = true;
   $('#messages').replaceChildren();
   $('#chat').hidden = true;
   $('#welcome').hidden = false;
+  $('#canvas').classList.add('welcome-visible');
   try { await api('/api/reset', { method: 'POST' }); } catch (error) { console.warn('Reset failed:', error); }
 }
 
@@ -380,17 +399,34 @@ function resetIdle() {
 
 function startVisit(language) {
   applyLanguage(language);
+  closePopups();
   $('#welcome').hidden = true;
+  $('#canvas').classList.remove('welcome-visible');
   $('#chat').hidden = false;
-  addMessage('mirai', t('greeting'));
+  addMessage('mirai', t('greeting'), { greeting: true });
   setFace('happy', 2000);
   resetIdle();
   if (state.voice) recorder.open().catch(() => setStatus(t('micBlocked'), true));
 }
 
-document.querySelectorAll('.big-choice').forEach((button) => button.addEventListener('click', () => startVisit(button.dataset.language)));
-document.querySelectorAll('.segmented button').forEach((button) => button.addEventListener('click', () => { applyLanguage(button.dataset.language); resetIdle(); }));
-$('#finish').addEventListener('click', endVisit);
+// Touching anywhere on the sleeping screen wakes MIRAI (the "..." menu is not part of it).
+$('#welcome').addEventListener('click', () => startVisit(state.language));
+$('#more').addEventListener('click', () => { resetIdle(); togglePopup($('#more'), $('#menu')); });
+$('#topics').addEventListener('click', () => { resetIdle(); togglePopup($('#topics'), $('#suggestions')); });
+$('#menu-language').addEventListener('click', () => { applyLanguage(state.language === 'id' ? 'en' : 'id'); resetIdle(); });
+$('#menu-volume').addEventListener('click', () => {
+  state.volume = VOLUMES[(VOLUMES.indexOf(state.volume) + 1) % VOLUMES.length];
+  if (state.audio) state.audio.volume = state.volume;
+  renderVolume();
+  resetIdle();
+});
+// A tap outside an open popup closes it.
+document.addEventListener('pointerdown', (event) => {
+  if (!event.target.closest('.popup, #more, #topics')) closePopups();
+});
+addEventListener('resize', fitCanvas);
+fitCanvas();
+$('#finish').addEventListener('click', () => endVisit());
 $('#mic').addEventListener('click', onMic);
 $('#cancel').addEventListener('click', cancel);
 $('#text-form').addEventListener('submit', (event) => {
@@ -401,7 +437,7 @@ $('#text-form').addEventListener('submit', (event) => {
   ask(question);
 });
 $('#type').addEventListener('click', () => { resetIdle(); showKeyboard($('#keyboard').hidden); });
-// Tapping the face while it is free makes MIRAI smile and shows the last answer again.
+// Tapping the face while it is free makes MIRAI smile.
 $('#face').addEventListener('click', () => {
   if ($('#face').dataset.mood === 'idle') setFace('happy', 1500);
 });
@@ -422,3 +458,5 @@ api('/api/status').then((response) => response.json()).then((status) => {
   $('#mic').hidden = !state.voice;
 }).catch(() => {});
 applyLanguage('id');
+setFace('sleeping');
+$('#canvas').classList.add('welcome-visible');
