@@ -9,19 +9,26 @@
 <body>
   <!-- Welcome: a visitor chooses a language, which also tells Whisper what to expect. -->
   <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+    <div class="welcome-inner">
+      <p class="eyebrow">BINUS ASO School of Engineering</p>
+      <h1 id="welcome-title">Halo! Saya <span class="brand">MIRAI</span>.<br><span class="sub">Hi! I'm MIRAI.</span></h1>
+      <p class="lead">Pilih bahasa untuk mulai bertanya.<br><span class="sub">Choose a language to start.</span></p>
+    </div>
     <div class="face" data-mood="idle" aria-hidden="true">
       <span class="eye left"></span><span class="eye right"></span>
       <span class="cheek left"></span><span class="cheek right"></span>
       <span class="mouth"></span>
     </div>
-    <div class="welcome-inner">
-      <p class="eyebrow">BINUS ASO School of Engineering</p>
-      <h1 id="welcome-title">Halo! Saya <span class="brand">MIRAI</span>.<br><span class="sub">Hi! I'm MIRAI.</span></h1>
-      <p class="lead">Pilih bahasa untuk mulai bertanya.<br><span class="sub">Choose a language to start.</span></p>
-      <div class="language-choice">
-        <button class="big-choice" data-language="id" type="button">Bahasa Indonesia</button>
-        <button class="big-choice" data-language="en" type="button">English</button>
-      </div>
+    <!-- Flags are inline SVG: flag emoji depend on the installed emoji font. -->
+    <div class="language-choice">
+      <button class="big-choice" data-language="id" type="button">
+        <svg class="flag" viewBox="0 0 3 2" aria-hidden="true"><rect width="3" height="2" fill="#fff"/><rect width="3" height="1" fill="#ce1126"/></svg>
+        Bahasa Indonesia
+      </button>
+      <button class="big-choice" data-language="en" type="button">
+        <svg class="flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="uk-flag"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#uk-flag)" stroke="#c8102e" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/></svg>
+        English
+      </button>
     </div>
   </section>
 
