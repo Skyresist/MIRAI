@@ -74,7 +74,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 @keyframes listen-glow { 0%, 100% { box-shadow: inset 0 0 0 0.6rem rgb(232 115 12 / 0.9); } 50% { box-shadow: inset 0 0 0 1.6rem rgb(232 115 12 / 0.35); } }
 /* Thinking: eyes glance from side to side, mouth a small flat line. */
 .face[data-mood="thinking"] .eye { height: 18vmin; animation: glance 1.8s ease-in-out infinite; }
-.face[data-mood="thinking"] .mouth { width: 9vmin; height: 0; left: calc(50% - 4.5vmin); border-width: 1.6vmin 0 0 0; border-radius: 999px; }
+.face[data-mood="thinking"] .mouth { width: 9vmin; height: 0; left: calc(50% - 4.5vmin); border: 0; border-top: 1.6vmin solid #fff; border-radius: 999px; }
 @keyframes glance { 0%, 100% { translate: -3vmin -2vmin; } 50% { translate: 3vmin -2vmin; } }
 /* Speaking: the mouth opens and closes. */
 .face[data-mood="speaking"] .mouth { background: #fff; border: 0; border-radius: 40% 40% 50% 50%; animation: talk 0.32s ease-in-out infinite alternate; }
@@ -82,7 +82,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 /* Didn't catch that: squinting eyes, a crooked mouth. */
 .face[data-mood="confused"] .eye { height: 9vmin; translate: 0 6vmin; animation: none; }
 .face[data-mood="confused"] .eye.right { height: 13vmin; translate: 0 4vmin; }
-.face[data-mood="confused"] .mouth { width: 9vmin; height: 0; left: calc(50% - 4.5vmin); border-width: 1.6vmin 0 0 0; border-radius: 999px; rotate: 10deg; }
+.face[data-mood="confused"] .mouth { width: 9vmin; height: 0; left: calc(50% - 4.5vmin); border: 0; border-top: 1.6vmin solid #fff; border-radius: 999px; rotate: 10deg; }
 /* Happy: smiling arc eyes and rosy cheeks (a visit starts, or someone taps the face). */
 .face[data-mood="happy"] .eye {
   height: 9vmin; translate: 0 6vmin; background: transparent; box-shadow: none;
