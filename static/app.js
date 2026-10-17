@@ -67,9 +67,9 @@ function fitCanvas() {
   document.documentElement.style.setProperty('--scale', Math.min(innerWidth / 1366, innerHeight / 769));
 }
 
-// The volume slider and the popular topics open above their buttons; opening one closes the other.
+// The "..." settings and the popular topics open above their buttons; opening one closes the other.
 function togglePopup(button, popup, open = popup.hidden) {
-  [[$('#volume-button'), $('#volume-panel')], [$('#topics'), $('#suggestions')]].forEach(([b, p]) => {
+  [[$('#more'), $('#menu')], [$('#topics'), $('#suggestions')]].forEach(([b, p]) => {
     p.hidden = !(open && p === popup);
     b.setAttribute('aria-expanded', String(!p.hidden));
   });
@@ -136,7 +136,6 @@ function renderShift() {
 function showKeyboard(open) {
   $('#keyboard').hidden = !open;
   $('#chat').classList.toggle('typing', open);
-  $('#corner').hidden = open;  // The keyboard needs the whole bottom row.
   $('#type').setAttribute('aria-expanded', String(open));
   if (open) { stopSpeaking(); closePopups(); $('#text').focus(); }
   else { $('#text').value = ''; shift = false; renderShift(); }
@@ -417,13 +416,13 @@ function startVisit(language) {
 
 // Touching anywhere on the sleeping screen wakes MIRAI (the "..." menu is not part of it).
 $('#welcome').addEventListener('click', () => startVisit(state.language));
-$('#volume-button').addEventListener('click', () => { resetIdle(); togglePopup($('#volume-button'), $('#volume-panel')); });
+$('#more').addEventListener('click', () => { resetIdle(); togglePopup($('#more'), $('#menu')); });
 $('#volume').addEventListener('input', () => { setVolume($('#volume').value / 100); resetIdle(); });
 $('#topics').addEventListener('click', () => { resetIdle(); togglePopup($('#topics'), $('#suggestions')); });
 document.querySelectorAll('.lang button').forEach((button) => button.addEventListener('click', () => { applyLanguage(button.dataset.language); resetIdle(); }));
 // A tap outside an open popup closes it.
 document.addEventListener('pointerdown', (event) => {
-  if (!event.target.closest('.popup, #volume-button, #topics')) closePopups();
+  if (!event.target.closest('.popup, #more, #topics')) closePopups();
 });
 addEventListener('resize', fitCanvas);
 fitCanvas();

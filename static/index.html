@@ -49,15 +49,34 @@
     <main id="chat" class="chat" hidden>
       <ol id="messages" class="messages" aria-live="polite"></ol>
 
+      <!-- The talk button is centred with equal gaps on both sides, whatever the labels' length. -->
       <div class="controls">
-        <button id="topics" class="pill outline topics" type="button" aria-controls="suggestions" aria-expanded="false" data-i18n="topics">Topik populer</button>
-        <button id="type" class="pill outline type" type="button" aria-controls="keyboard" aria-expanded="false" data-i18n="type">Ketik</button>
+        <div class="side left">
+          <button id="topics" class="pill outline topics" type="button" aria-controls="suggestions" aria-expanded="false" data-i18n="topics">Topik populer</button>
+          <button id="type" class="pill outline type" type="button" aria-controls="keyboard" aria-expanded="false" data-i18n="type">Ketik</button>
+          <button id="cancel" class="pill outline cancel" type="button" hidden data-i18n="cancel">✕ Batal</button>
+        </div>
         <button id="mic" class="pill primary mic" type="button">
           <span class="mic-level" aria-hidden="true"></span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H8.5a1 1 0 1 0 0 2h7a1 1 0 1 0 0-2H13v-2.59a6 6 0 0 0 5-5.91Z"/></svg>
           <span id="mic-label" data-i18n="talk">Mulai bertanya</span>
         </button>
-        <button id="cancel" class="pill outline cancel" type="button" hidden data-i18n="cancel">✕ Batal</button>
+        <div class="side right">
+          <!-- The "..." settings sit on top of Selesai: language and volume. -->
+          <div id="menu" class="popup menu" hidden>
+            <span id="volume-label" class="volume-label">100%</span>
+            <input id="volume" type="range" min="0" max="100" step="5" value="100" orient="vertical" aria-label="Volume">
+            <svg class="speaker" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3Zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12ZM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54Z"/></svg>
+        <div class="lang" role="group" aria-label="Bahasa / Language">
+          <button type="button" data-language="id"><svg class="flag" viewBox="0 0 3 2" aria-hidden="true"><rect width="3" height="2" fill="#fff"/><rect width="3" height="1" fill="#ce1126"/></svg>ID</button>
+          <button type="button" data-language="en"><svg class="flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="uk-flag-menu"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#uk-flag-menu)" stroke="#c8102e" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/></svg>EN</button>
+        </div>
+          </div>
+          <button id="more" class="round more" type="button" aria-controls="menu" aria-expanded="false" aria-label="Pengaturan / Settings">
+            <span></span><span></span><span></span>
+          </button>
+          <button id="finish" class="pill outline finish" type="button" data-i18n="finish">Selesai</button>
+        </div>
       </div>
 
       <div id="suggestions" class="popup suggestions" hidden aria-label="Suggested questions"></div>
@@ -76,27 +95,12 @@
       </div>
     </main>
 
-    <!-- Bottom-right corner, always in view and clear of the face: language, volume, finish. -->
+    <!-- Welcome screen: the language can be chosen before starting. -->
     <div id="corner" class="corner">
-      <div class="lang" role="group" aria-label="Bahasa / Language">
-        <button type="button" data-language="id">
-          <svg class="flag" viewBox="0 0 3 2" aria-hidden="true"><rect width="3" height="2" fill="#fff"/><rect width="3" height="1" fill="#ce1126"/></svg>ID
-        </button>
-        <button type="button" data-language="en">
-          <svg class="flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="uk-flag"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#uk-flag)" stroke="#c8102e" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/></svg>EN
-        </button>
-      </div>
-      <div class="volume-wrap">
-        <!-- The slider rises above the speaker button. -->
-        <div id="volume-panel" class="popup volume-panel" hidden>
-          <span id="volume-label">100%</span>
-          <input id="volume" type="range" min="0" max="100" step="5" value="100" orient="vertical" aria-label="Volume">
+        <div class="lang" role="group" aria-label="Bahasa / Language">
+          <button type="button" data-language="id"><svg class="flag" viewBox="0 0 3 2" aria-hidden="true"><rect width="3" height="2" fill="#fff"/><rect width="3" height="1" fill="#ce1126"/></svg>ID</button>
+          <button type="button" data-language="en"><svg class="flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="uk-flag"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#uk-flag)" stroke="#c8102e" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/></svg>EN</button>
         </div>
-        <button id="volume-button" class="round" type="button" aria-controls="volume-panel" aria-expanded="false" aria-label="Volume">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3Zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12ZM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54Z"/></svg>
-        </button>
-      </div>
-      <button id="finish" class="pill outline finish" type="button" data-i18n="finish">Selesai</button>
     </div>
 
     <div id="idle-warning" class="idle-warning" hidden role="alertdialog" aria-live="assertive">

@@ -152,38 +152,46 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--orange); ou
 .dots::after { content: ''; animation: dots 1.2s steps(4) infinite; }
 @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
 
-.controls { position: absolute; top: 665px; left: 40px; width: 1210px; height: 70px; }
-.topics { position: absolute; top: 7px; left: 0; }
-.type { position: absolute; top: 7px; left: 250px; }
-.mic { position: absolute; top: 0; left: 473px; width: 340px; height: 70px; border-radius: 35px; font-size: 20px; animation: mic-pulse 2s infinite; }
+/* Three columns: the talk button sits exactly in the middle, its neighbours hug it at the same gap. */
+.controls {
+  position: absolute; top: 665px; left: 40px; width: 1286px; height: 70px;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 32px;
+}
+.side { display: flex; align-items: center; gap: 24px; }
+.side.left { justify-self: end; }
+.side.right { justify-self: start; position: relative; }
+.mic { position: relative; width: 340px; height: 70px; border-radius: 35px; font-size: 20px; animation: mic-pulse 2s infinite; }
 .mic svg { width: 26px; height: 26px; fill: currentColor; position: relative; }
 .mic span { position: relative; }
 @keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgb(241 135 0 / 0.4); } 70% { box-shadow: 0 0 0 20px rgb(241 135 0 / 0); } 100% { box-shadow: 0 0 0 0 rgb(241 135 0 / 0); } }
 .mic-level { position: absolute; inset: 0; border-radius: inherit; border: 0 solid rgb(241 135 0 / 0.35); transition: border-width 80ms linear, inset 80ms linear; }
 .mic.listening { background: #e5484d; box-shadow: none; animation: none; }
 .mic.busy { background: #404040; box-shadow: none; animation: none; }
-.cancel { position: absolute; top: 7px; left: 0; color: var(--danger); border-color: var(--danger); }
+.cancel { color: var(--danger); border-color: var(--danger); }
 
-/* ---------- Bottom-right corner: language, volume, finish ---------- */
-.corner { position: absolute; z-index: 3; top: 672px; right: 40px; height: 56px; display: flex; align-items: center; gap: 12px; }
+/* ---------- Language switch (welcome corner and the "..." menu) ---------- */
+.corner { position: absolute; z-index: 3; top: 672px; right: 40px; }
+.canvas:not(.welcome-visible) .corner, .welcome-visible .status { display: none; }
 .lang { display: flex; height: 56px; border: 2px solid #f4f7fa; border-radius: 28px; overflow: hidden; }
 .lang button { display: flex; align-items: center; gap: 8px; padding: 0 16px; font-size: 20px; font-weight: 700; color: var(--ink); }
 .lang button[aria-pressed="true"] { background: #f4f7fa; color: #111827; }
 .flag { width: 33px; height: 22px; border-radius: 3px; box-shadow: 0 0 0 1px #9ca3af; }
+
+/* ---------- "..." on top of Selesai; its menu holds the volume slider and the language ---------- */
 .round {
   width: 56px; height: 56px; border-radius: 50%; border: 2px solid #f4f7fa; display: flex; align-items: center; justify-content: center;
 }
-.round svg { width: 28px; height: 28px; fill: currentColor; }
-.round[aria-expanded="true"] { background: rgb(255 255 255 / 0.15); }
-.volume-wrap { position: relative; }
-.volume-panel {
-  bottom: 68px; left: 50%; translate: -50% 0; width: 76px; height: 260px; padding: 16px 0;
-  align-items: center; gap: 10px; font-size: 18px; font-weight: 700;
+.more { position: absolute; bottom: calc(100% + 12px); left: 50%; translate: -50% 0; gap: 5px; }
+.more span { width: 8px; height: 8px; border-radius: 50%; background: #f4f7fa; }
+.more[aria-expanded="true"] { background: rgb(255 255 255 / 0.15); }
+.menu {
+  bottom: calc(100% + 80px); left: 50%; translate: -50% 0; padding: 18px; gap: 12px; align-items: center;
 }
+.volume-label { font-size: 18px; font-weight: 700; }
 /* Bottom is quiet, top is loud; orient= is Firefox's older spelling of the same thing. */
-.volume-panel input { flex: 1; width: 40px; margin: 0; writing-mode: vertical-lr; direction: rtl; accent-color: var(--orange); cursor: pointer; }
+.menu input { width: 44px; height: 170px; margin: 0; writing-mode: vertical-lr; direction: rtl; accent-color: var(--orange); cursor: pointer; }
+.speaker { width: 28px; height: 28px; fill: var(--ink); margin-bottom: 4px; }
 .finish { padding: 0 24px; }
-.welcome-visible .volume-wrap, .welcome-visible .finish, .welcome-visible .status { display: none; }
 
 /* ---------- Popups ---------- */
 .popup {
