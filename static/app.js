@@ -208,18 +208,10 @@ function cancel() {
   setStatus();
 }
 
-async function speak(text, language) {
-  if (!state.voice) return;
-  const token = state.speaking = {};
-  updateCancel();
-  try {
-    const response = await api('/api/speak', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, language }),
-    });
-    const blob = await response.blob();
-    if (state.speaking !== token) return;  // Cancelled, or a new question came in meanwhile.
+// Plays one WAV; resolves when it ends or is paused (cancel, a new question, Talk).
+function play(blob) {
+  return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
-    stopSpeaking();
     const audio = new Audio(url);
     state.audio = audio;
     updateCancel();
@@ -227,15 +219,44 @@ async function speak(text, language) {
     audio.onplaying = () => { if (state.audio === audio) setFace('speaking'); };
     audio.onended = audio.onpause = () => {
       URL.revokeObjectURL(url);
-      if (state.audio === audio) { state.audio = null; setFace('idle'); }
+      if (state.audio === audio) state.audio = null;
+      resolve();
+    };
+    audio.play().catch(reject);
+  });
+}
+
+// Piper synthesises on the CPU, so the whole answer took seconds before any sound. Speaking it
+// sentence by sentence starts the voice after the first one, while the next is made during playback.
+async function speak(text, language) {
+  if (!state.voice) return;
+  const token = state.speaking = {};
+  updateCancel();
+  const sentences = text.replace(/\s*\[\d+\]/g, '').split(/(?<=[.!?])\s+/).filter((sentence) => sentence.trim());
+  const synthesize = (sentence) => api('/api/speak', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: sentence, language }),
+  }).then((response) => response.blob());
+  try {
+    let next = synthesize(sentences[0]);
+    for (let index = 0; index < sentences.length; index += 1) {
+      const blob = await next;
+      if (state.speaking !== token) return;  // Cancelled, or a new question came in meanwhile.
+      if (index + 1 < sentences.length) {
+        next = synthesize(sentences[index + 1]);
+        next.catch(() => {});  // Reported when awaited; never as an unhandled rejection after a cancel.
+      }
+      await play(blob);
+    }
+  } catch (error) {
+    console.warn('Speech unavailable:', error);  // Text already answered the visitor.
+  } finally {
+    if (state.speaking === token) {
+      state.speaking = null;
+      if ($('#face').dataset.mood === 'speaking') setFace('idle');
       updateCancel();
       if (!state.busy && !recorder.recording) setStatus();
       resetIdle();
-    };
-    await audio.play();
-  } catch (error) {
-    console.warn('Speech unavailable:', error);  // Text already answered the visitor.
-    if (state.speaking === token) { state.speaking = null; updateCancel(); setStatus(); }
+    }
   }
 }
 
