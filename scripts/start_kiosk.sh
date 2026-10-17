@@ -71,6 +71,13 @@ if command -v pactl >/dev/null 2>&1; then
         sleep 1
     done
     echo "Microphone: $(pactl get-default-source 2>/dev/null)"
+    # Same for the voice: Ubuntu falls back to the built-in analog output; the speakers are on HDMI/DisplayPort.
+    for _ in $(seq 30); do
+        hdmi_out="$(pactl list short sinks 2>/dev/null | awk '$2 ~ /^alsa_output\..*hdmi/ {print $2; exit}' || true)"
+        [[ -n "$hdmi_out" ]] && pactl set-default-sink "$hdmi_out" && break
+        sleep 1
+    done
+    echo "Speaker: $(pactl get-default-sink 2>/dev/null)"
 fi
 chrome="$(command -v chromium-browser || command -v chromium || command -v google-chrome || true)"
 if [[ -n "$chrome" ]]; then
