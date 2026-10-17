@@ -44,7 +44,7 @@ VISITS = {
         ('Aku bingung pilih jurusan', 'social-or-fact', {}),
         ('Biaya kuliahnya berapa juta per semester?', 'no-numbers', {}),
         ('Bisa dicicil?', 'fact', {'any': ['BCA', 'BNI', 'CIMB', 'BRI', '0%']}),
-        ('Kampusnya di mana?', 'fact', {'all': ['Alam Sutera']}),
+        ('Kampusnya di mana?', 'fact', {'all': ['BINUS BSD', 'Banten'], 'none': ['Alam Sutera']}),
     ]),
     'en-offtopic-and-facts': ('en', [
         ('Are you a robot?', 'social', {}),

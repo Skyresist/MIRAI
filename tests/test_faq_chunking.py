@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import numpy as np
 
 from retriever import Retriever, chunk_documents, faq_blocks, parent_text
-from utils.pdf_loader import clean_text
+from utils.pdf_loader import clean_text, correct_faq
 
 # Same layout as the real BINUS ASO FAQ: numbered questions, a table header and an
 # answer that starts on the question's own line (FAQ 10).
@@ -51,3 +51,9 @@ def test_long_answers_are_windowed_around_the_matching_piece():
 def test_pdf_text_cleanup_matches_typed_questions():
     assert clean_text('D’BASE kelas.Di sini Eco‑marathon \U0001F517 link') == "D'BASE kelas. Di sini Eco-marathon link"
     assert clean_text('Revolution 4.0 dan aso-group.jp') == 'Revolution 4.0 dan aso-group.jp'
+
+
+def test_stale_campus_location_is_corrected_even_across_line_breaks():
+    page = ('10 Dimana lokasi BINUS ASO? Saat ini, BINUS ASO berlokasi di Alam Sutera,\nTangerang. Namun di '
+            'pertengahan tahun 2026, BINUS-ASO akan hadir sebagai kampus baru di Digital Hub (D-Hub), BSD. 11 Apakah')
+    assert correct_faq(page) == '10 Dimana lokasi BINUS ASO? BINUS ASO berlokasi di Digital Hub (D-Hub), BSD, Tangerang. 11 Apakah'

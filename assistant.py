@@ -71,6 +71,21 @@ INTRODUCTION = {
           'Kamu bisa bicara atau mengetik dalam bahasa Indonesia atau Inggris, lalu tanya soal jurusan, '
           'beasiswa, UKM, atau cara mendaftar.',
 }
+# The FAQ still names the old Alam Sutera campus, and the model mixed it up with ASO College in
+# Fukuoka, so every question about where this campus is gets one fixed answer.
+LOCATION = {
+    'en': 'The BINUS ASO campus is at BINUS BSD, Tangerang, Banten.',
+    'id': 'Kampus BINUS ASO berada di BINUS BSD, Tangerang, Banten.',
+}
+LOCATION_QUESTION = re.compile(
+    r"\b(?:kampus\w*|campus|binus(?: aso)?)(?: \w+)? (?:ada |berada |terletak |berlokasi )?di ?mana\b|"
+    r"\bdi ?mana (?:(?:lokasi|letak|alamat)\w* )?(?:kampus|binus)|"
+    r"\b(?:lokasi|letak|alamat)\w* (?:kampus|binus)|"
+    r"\bwhere(?: is|'s| are)? (?:the |your |this )?(?:campus|binus|school|university)\b|\bwhere are you (?:located|based)\b|"
+    r"\b(?:campus|binus aso)(?:'s)? (?:location|address)\b|\b(?:location|address) of (?:the )?(?:campus|binus)|"
+    r"\b(?:kampus\w*|campus|binus(?: aso)?)\b.*\b(?:alam sutera|bsd|d-hub|digital hub|tangerang|jakarta)\b", re.I)
+# ASO College's own campus in Japan is a different question; the FAQ answers it.
+ELSEWHERE = re.compile(r'\b(?:aso college|jepang|japan|fukuoka|kyushu)\b', re.I)
 IDENTITY_QUESTION = re.compile(
     r"(?:(?:hi|hello|halo|hai)[,!]?\s+)?(?:who are you|what are you|"
     r"what(?: is|'s) your name|introduce yourself|what can you do|"
@@ -211,6 +226,10 @@ class Assistant:
             raise ValueError('Answer language must be id or en')
         if IDENTITY_QUESTION.fullmatch(question):
             text = INTRODUCTION[language]
+            self.memory.append(question, text)
+            return Answer(text=text, language=language)
+        if LOCATION_QUESTION.search(question) and not ELSEWHERE.search(question):
+            text = LOCATION[language]
             self.memory.append(question, text)
             return Answer(text=text, language=language)
         history = self.memory.recent(self.settings.history_turns, self.settings.history_chars)

@@ -105,8 +105,14 @@
     {
       "canonical": "Alam Sutera",
       "aliases": ["alam sutera", "alam sutra", "alam sutera tangerang"],
-      "search": "lokasi kampus Alam Sutera Tangerang location campus",
+      "search": "lokasi kampus BINUS ASO BSD Tangerang Banten location campus",
       "pronunciation": {}
+    },
+    {
+      "canonical": "BSD",
+      "aliases": ["bsd", "bsd city", "b s d"],
+      "search": "lokasi kampus BINUS BSD Tangerang Banten location campus",
+      "pronunciation": {"id": "be es de", "en": "B S D"}
     },
     {
       "canonical": "Monozukuri",
