@@ -28,25 +28,35 @@ for ((i = 0; i < ${#args[@]}; i++)); do
 done
 url="http://127.0.0.1:${port}"
 
-.venv/bin/python server.py "${profile[@]}" "${args[@]}" &
-server_pid=$!
-trap 'kill "$server_pid" 2>/dev/null || true' EXIT INT TERM
+# Autostart may already have a server loading: a second copy would fail with
+# "[Errno 98] Address already in use", so wait for that one instead.
+server_pattern='python[^ ]* server\.py'
+server_pid=''
+if pgrep -f "$server_pattern" >/dev/null; then
+    echo 'A MIRAI server is already running (probably started at login); using it.'
+else
+    .venv/bin/python server.py "${profile[@]}" "${args[@]}" &
+    server_pid=$!
+    trap 'kill "$server_pid" 2>/dev/null || true' EXIT INT TERM
+fi
+server_alive() {
+    if [[ -n "$server_pid" ]]; then kill -0 "$server_pid" 2>/dev/null; else pgrep -f "$server_pattern" >/dev/null; fi
+}
 
+# No time limit: a cold boot can take minutes, and opening the browser early shows a dead page.
 echo "Waiting for MIRAI at $url ..."
-for _ in {1..120}; do
-    if curl --fail --silent "$url/api/status" >/dev/null; then
-        break
-    fi
-    if ! kill -0 "$server_pid" 2>/dev/null; then
+until curl --fail --silent "$url/api/status" >/dev/null; do
+    if ! server_alive; then
         echo 'MIRAI server stopped during startup; see the error above.' >&2
         exit 1
     fi
     sleep 1
 done
+echo 'MIRAI server is ready.'
 
 if [[ "$browser" != true ]]; then
     echo "MIRAI server running at $url (Ctrl+C to stop)."
-    wait "$server_pid"
+    if [[ -n "$server_pid" ]]; then wait "$server_pid"; fi
     exit
 fi
 
@@ -96,4 +106,5 @@ EOF
 else
     echo "No browser found. Install one (sudo apt-get install chromium-browser) or open $url manually." >&2
 fi
-wait "$server_pid"
+# Our own server, or else the browser.
+wait
