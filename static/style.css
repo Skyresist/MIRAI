@@ -137,23 +137,26 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 }
 .stage > * { pointer-events: auto; }
 
-/* Only the latest exchange is shown; older turns stay in the DOM for cancel/undo. */
+/* The whole visit as a transcript that grows upward; it scrolls, and the newest turn stays in view. */
 .messages {
-  list-style: none; margin: 0; padding: 0; width: min(56rem, 100%); max-height: 48vh;
+  list-style: none; margin: 0; padding: 0; width: min(56rem, 100%);
+  /* Room between the raised mouth (33% + 8vmin) and the buttons (~17rem); never below a quarter screen. */
+  max-height: max(25vh, calc(67vh - 10vmin - 17rem));
   display: flex; flex-direction: column; gap: var(--space-3); overflow-y: auto;
   transition: opacity 400ms ease, translate 400ms ease;
 }
 .chat.resting .messages, .chat.resting .suggestions { opacity: 0; translate: 0 1rem; pointer-events: none; }
-.message { display: none; max-width: 100%; padding: var(--space-4) var(--space-5); border-radius: var(--radius); white-space: pre-wrap; user-select: text; }
-.message:nth-last-child(-n + 2) { display: block; }
+.message { flex: none; max-width: 85%; padding: var(--space-4) var(--space-5); border-radius: var(--radius); white-space: pre-wrap; user-select: text; }
+/* Older turns step back so the latest question and answer stand out. */
+.message:not(:nth-last-child(-n + 2)) { filter: brightness(0.8); }
 .message.visitor { align-self: flex-end; background: var(--visitor); font-size: var(--text-small); color: var(--ink-muted); }
 .message.mirai {
-  position: relative; align-self: center; background: var(--surface); color: var(--ink);
+  position: relative; align-self: flex-start; background: var(--surface); color: var(--ink);
   box-shadow: 0 0.4rem 1.5rem rgb(0 0 0 / 0.25); animation: pop 220ms ease-out;
 }
-/* Bubble tail pointing up at the mouth. */
+/* Bubble tail pointing up toward the face. */
 .message.mirai::before {
-  content: ''; position: absolute; top: -0.6rem; left: 50%; translate: -50% 0; width: 1.2rem; height: 1.2rem;
+  content: ''; position: absolute; top: -0.6rem; left: 2rem; width: 1.2rem; height: 1.2rem;
   background: var(--surface); rotate: 45deg;
 }
 .message.error { color: var(--danger); }

@@ -156,7 +156,7 @@ function addMessage(role, text, { error = false } = {}) {
   $('#messages').append(item);
   wake();
   if ($('#face').dataset.mood === 'idle') rest();
-  item.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  $('#messages').scrollTop = $('#messages').scrollHeight;
   return item;
 }
 
