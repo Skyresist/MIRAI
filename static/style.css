@@ -162,28 +162,40 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--orange); ou
 .mic-level { position: absolute; inset: 0; border-radius: inherit; border: 0 solid rgb(241 135 0 / 0.35); transition: border-width 80ms linear, inset 80ms linear; }
 .mic.listening { background: #e5484d; box-shadow: none; animation: none; }
 .mic.busy { background: #404040; box-shadow: none; animation: none; }
-.cancel { position: absolute; top: 7px; right: 0; color: var(--danger); border-color: var(--danger); }
+.cancel { position: absolute; top: 7px; left: 0; color: var(--danger); border-color: var(--danger); }
 
-/* ---------- Popups: the "..." menu and the popular topics ---------- */
-.more {
-  position: absolute; z-index: 3; top: 672px; left: 1270px; width: 56px; height: 56px; border-radius: 50%;
-  border: 2px solid #f4f7fa; display: flex; align-items: center; justify-content: center; gap: 5px;
+/* ---------- Bottom-right corner: language, volume, finish ---------- */
+.corner { position: absolute; z-index: 3; top: 672px; right: 40px; height: 56px; display: flex; align-items: center; gap: 12px; }
+.lang { display: flex; height: 56px; border: 2px solid #f4f7fa; border-radius: 28px; overflow: hidden; }
+.lang button { display: flex; align-items: center; gap: 8px; padding: 0 16px; font-size: 20px; font-weight: 700; color: var(--ink); }
+.lang button[aria-pressed="true"] { background: #f4f7fa; color: #111827; }
+.flag { width: 33px; height: 22px; border-radius: 3px; box-shadow: 0 0 0 1px #9ca3af; }
+.round {
+  width: 56px; height: 56px; border-radius: 50%; border: 2px solid #f4f7fa; display: flex; align-items: center; justify-content: center;
 }
-.more span { width: 8px; height: 8px; border-radius: 50%; background: #f4f7fa; }
-.more[aria-expanded="true"] { background: rgb(255 255 255 / 0.15); }
+.round svg { width: 28px; height: 28px; fill: currentColor; }
+.round[aria-expanded="true"] { background: rgb(255 255 255 / 0.15); }
+.volume-wrap { position: relative; }
+.volume-panel {
+  bottom: 68px; left: 50%; translate: -50% 0; width: 76px; height: 260px; padding: 16px 0;
+  align-items: center; gap: 10px; font-size: 18px; font-weight: 700;
+}
+/* Bottom is quiet, top is loud; orient= is Firefox's older spelling of the same thing. */
+.volume-panel input { flex: 1; width: 40px; margin: 0; writing-mode: vertical-lr; direction: rtl; accent-color: var(--orange); cursor: pointer; }
+.finish { padding: 0 24px; }
+.welcome-visible .volume-wrap, .welcome-visible .finish, .welcome-visible .status { display: none; }
+
+/* ---------- Popups ---------- */
 .popup {
   position: absolute; z-index: 3; bottom: 105px; background: var(--panel); border-radius: 20px;
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.5); display: flex; flex-direction: column; overflow: hidden;
 }
-.menu { right: 40px; width: 280px; }
-.menu button, .suggestions button {
+.suggestions button {
   min-height: 70px; padding: 0 24px; display: flex; align-items: center; gap: 15px; text-align: left;
   font-size: 22px; font-weight: 300; line-height: 30px; text-transform: uppercase; border-bottom: 1px solid var(--line);
 }
-.menu button:last-child, .suggestions button:last-child { border-bottom: 0; }
-.menu button:active, .suggestions button:active { background: #262626; }
-.menu .finish { color: var(--orange-2); font-weight: 600; }
-.welcome-visible .menu .finish, .welcome-visible .status { display: none; }
+.suggestions button:last-child { border-bottom: 0; }
+.suggestions button:active { background: #262626; }
 .suggestions { left: 40px; width: 520px; max-height: 470px; overflow-y: auto; }
 .suggestions button { min-height: 58px; text-transform: none; font-size: 21px; }
 

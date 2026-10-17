@@ -5,7 +5,7 @@ const TEXT = {
   id: {
     finish: 'Selesai', send: 'Kirim', cancel: '✕ Batal', placeholder: 'Ketik pertanyaan…', talk: 'Mulai bertanya', type: 'Ketik',
     stopTalking: 'Selesai bicara', topics: 'Topik populer', close: 'Tutup', typeLabel: 'Ketik pertanyaanmu',
-    languageItem: 'Bahasa - ID', volume: 'Volume', touchStart: 'Sentuh layar untuk memulai',
+    touchStart: 'Sentuh layar untuk memulai',
     welcome: 'Halo! Aku MIRAI, siap membantu mencari informasi tentang BINUS ASO.',
     stillThere: 'Masih di sana? Sentuh layar untuk melanjutkan.',
     greeting: 'Halo! Aku bisa membantu mencari informasi tentang BINUS ASO. Tekan Mulai Bertanya, ketik, atau pilih Topik Populer.',
@@ -21,7 +21,7 @@ const TEXT = {
   en: {
     finish: 'Finish', send: 'Send', cancel: '✕ Cancel', placeholder: 'Type a question…', talk: 'Start asking', type: 'Type',
     stopTalking: 'Done talking', topics: 'Popular topics', close: 'Close', typeLabel: 'Type your question',
-    languageItem: 'Language - EN', volume: 'Volume', touchStart: 'Touch the screen to start',
+    touchStart: 'Touch the screen to start',
     welcome: "Hi! I'm MIRAI, here to help you find information about BINUS ASO.",
     stillThere: 'Still there? Touch the screen to continue.',
     greeting: 'Hi! I can help you find information about BINUS ASO. Tap Start Asking, type, or pick a Popular Topic.',
@@ -67,17 +67,21 @@ function fitCanvas() {
   document.documentElement.style.setProperty('--scale', Math.min(innerWidth / 1366, innerHeight / 769));
 }
 
-// The "..." menu and the popular topics open above the buttons; opening one closes the other.
+// The volume slider and the popular topics open above their buttons; opening one closes the other.
 function togglePopup(button, popup, open = popup.hidden) {
-  [[$('#more'), $('#menu')], [$('#topics'), $('#suggestions')]].forEach(([b, p]) => {
+  [[$('#volume-button'), $('#volume-panel')], [$('#topics'), $('#suggestions')]].forEach(([b, p]) => {
     p.hidden = !(open && p === popup);
     b.setAttribute('aria-expanded', String(!p.hidden));
   });
 }
-const closePopups = () => togglePopup($('#more'), $('#menu'), false);
+const closePopups = () => togglePopup($('#topics'), $('#suggestions'), false);
 
-const VOLUMES = [1, 0.7, 0.4];
-function renderVolume() { $('#volume-label').textContent = `${t('volume')} ${Math.round(state.volume * 100)}%`; }
+function setVolume(volume) {
+  state.volume = volume;
+  if (state.audio) state.audio.volume = volume;
+  $('#volume').value = Math.round(volume * 100);
+  $('#volume-label').textContent = `${Math.round(volume * 100)}%`;
+}
 
 // On-screen keyboard: keys write into the text box; Shift capitalises the next letter only.
 const KEY_ROWS = [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
@@ -132,7 +136,7 @@ function renderShift() {
 function showKeyboard(open) {
   $('#keyboard').hidden = !open;
   $('#chat').classList.toggle('typing', open);
-  $('#more').hidden = open;  // It would cover the keyboard's corner.
+  $('#corner').hidden = open;  // The keyboard needs the whole bottom row.
   $('#type').setAttribute('aria-expanded', String(open));
   if (open) { stopSpeaking(); closePopups(); $('#text').focus(); }
   else { $('#text').value = ''; shift = false; renderShift(); }
@@ -148,7 +152,7 @@ function applyLanguage(language) {
   document.documentElement.lang = language;
   document.querySelectorAll('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
   document.querySelectorAll('[data-i18n-placeholder]').forEach((node) => { node.placeholder = t(node.dataset.i18nPlaceholder); });
-  renderVolume();
+  document.querySelectorAll('.lang button').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.language === language)));
   renderSuggestions();
   if (!state.busy && !recorder.recording) setStatus();
 }
@@ -177,6 +181,8 @@ function addMessage(role, text, { error = false, greeting = false } = {}) {
 // The cancel button shows whenever there is something to take back: recording, thinking or speaking.
 function updateCancel() {
   $('#cancel').hidden = !($('#mic').classList.contains('listening') || state.busy || state.audio || state.speaking);
+  $('#topics').hidden = $('#type').hidden = !$('#cancel').hidden;  // Cancel takes their place meanwhile.
+  if (!$('#cancel').hidden) { $('#suggestions').hidden = true; $('#topics').setAttribute('aria-expanded', 'false'); }
 }
 
 function setBusy(busy) {
@@ -411,18 +417,13 @@ function startVisit(language) {
 
 // Touching anywhere on the sleeping screen wakes MIRAI (the "..." menu is not part of it).
 $('#welcome').addEventListener('click', () => startVisit(state.language));
-$('#more').addEventListener('click', () => { resetIdle(); togglePopup($('#more'), $('#menu')); });
+$('#volume-button').addEventListener('click', () => { resetIdle(); togglePopup($('#volume-button'), $('#volume-panel')); });
+$('#volume').addEventListener('input', () => { setVolume($('#volume').value / 100); resetIdle(); });
 $('#topics').addEventListener('click', () => { resetIdle(); togglePopup($('#topics'), $('#suggestions')); });
-$('#menu-language').addEventListener('click', () => { applyLanguage(state.language === 'id' ? 'en' : 'id'); resetIdle(); });
-$('#menu-volume').addEventListener('click', () => {
-  state.volume = VOLUMES[(VOLUMES.indexOf(state.volume) + 1) % VOLUMES.length];
-  if (state.audio) state.audio.volume = state.volume;
-  renderVolume();
-  resetIdle();
-});
+document.querySelectorAll('.lang button').forEach((button) => button.addEventListener('click', () => { applyLanguage(button.dataset.language); resetIdle(); }));
 // A tap outside an open popup closes it.
 document.addEventListener('pointerdown', (event) => {
-  if (!event.target.closest('.popup, #more, #topics')) closePopups();
+  if (!event.target.closest('.popup, #volume-button, #topics')) closePopups();
 });
 addEventListener('resize', fitCanvas);
 fitCanvas();
