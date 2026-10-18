@@ -13,7 +13,7 @@ Ask it a question in Bahasa Indonesia or English. It looks up the answer in the 
 ![Offline](https://img.shields.io/badge/100%25-offline-orange)
 ![Tests](https://img.shields.io/badge/tests-191%20passing-2ea44f)
 
-Designed and built by Clayvent Yuuki William, BCore AI Research Club
+Designed and built by Yours Truly
 
 </div>
 
@@ -30,7 +30,7 @@ Designed and built by Clayvent Yuuki William, BCore AI Research Club
 
 ```mermaid
 flowchart LR
-    A[🎙️ USB mic] --> B[Whisper small<br/>speech to text]
+    A[USB mic] --> B[Whisper small<br/>speech to text]
     B --> C[Glossary fixes<br/>ukam → UKM]
     C --> D{Router}
     D -->|who are you / where is campus| E[Fixed answers]
@@ -40,8 +40,8 @@ flowchart LR
     E --> H[Safety checks<br/>no invented majors]
     G --> H
     H --> I[Piper TTS<br/>ID / EN voice]
-    I --> J[🔊 HDMI speaker]
-    H --> K[🖥️ Touchscreen face UI]
+    I --> J[HDMI speaker]
+    H --> K[Touchscreen face UI]
 ```
 
 | Stage | What it uses | Why we picked it |
