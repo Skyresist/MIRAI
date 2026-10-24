@@ -146,7 +146,8 @@ def create_app(arguments, preload=True) -> FastAPI:
             kiosk.visitor.after_answer(answer.language)
             sources = [{'source': source['source'], 'page': source.get('page'),
                         'question': source.get('question')} for source in answer.sources]
-            return {'text': patch_response(answer.text), 'sources': sources, 'language': answer.language}
+            return {'text': patch_response(answer.text), 'sources': sources, 'language': answer.language,
+                    'navigation': answer.navigation}
         except HTTPException:
             raise
         except ValueError as error:

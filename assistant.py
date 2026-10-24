@@ -7,6 +7,7 @@ from config import Settings
 from glossary import Glossary
 from llm import FALLBACK, UNIVERSITY_FALLBACK, OllamaChat, detect_language, is_memory_request
 from memory import Memory
+import navigation
 
 
 APOLOGIES = {text for texts in (FALLBACK, UNIVERSITY_FALLBACK) for text in texts.values()}
@@ -61,6 +62,7 @@ class Answer:
     text: str
     sources: list[dict] = field(default_factory=list)
     language: str = 'en'
+    navigation: dict | None = None
 
 
 INTRODUCTION = {
@@ -209,11 +211,14 @@ def conversation_query(question, history):
 
 
 class Assistant:
-    def __init__(self, settings: Settings, retriever, *, memory=None, chat=None, glossary=None):
+    def __init__(self, settings: Settings, retriever, *, memory=None, chat=None, glossary=None, navigator=None):
         self.settings, self.retriever = settings, retriever
         self.memory = memory if memory is not None else Memory(session=settings.session)
         self.chat = chat or OllamaChat(settings)
         self.glossary = glossary or Glossary(settings.glossary_path)
+        if navigator is None and settings.nav_url:
+            navigator = navigation.Navigator(settings.nav_url, self.chat)
+        self.navigator = navigator
 
     def ask(self, question: str, language: str | None = None) -> Answer:
         question = self.glossary.normalize(question.strip())
@@ -224,6 +229,11 @@ class Assistant:
         language = language or ('id' if detect_language(question) == 'Bahasa Indonesia' else 'en')
         if language not in ('id', 'en'):
             raise ValueError('Answer language must be id or en')
+        command = navigation.parse(question) if self.navigator else None
+        if command:
+            text, trip = self.navigator.handle(command, question, language)
+            self.memory.append(question, text)
+            return Answer(text=text, language=language, navigation=trip)
         if IDENTITY_QUESTION.fullmatch(question):
             text = INTRODUCTION[language]
             self.memory.append(question, text)

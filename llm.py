@@ -1,4 +1,5 @@
 """Qwen3 chat with real Ollama tool calls, bounded rounds and visitor context."""
+import json
 import logging
 import re
 import time
@@ -104,7 +105,8 @@ senior student showing someone around. In Indonesian use friendly, polite "kamu"
 use simple, natural sentences. Never use emoji, markdown or bullet symbols unless asked for a list.
 When naming several things in Indonesian, introduce them formally with "yaitu", for example
 "BINUS ASO memiliki beberapa UKM, yaitu ..."; never open with "antara lain" or "Ada ... seperti".
-You cannot walk visitors anywhere yet; if asked to guide them somewhere, suggest asking nearby staff.
+You can walk visitors to the Marketing office, the Multi-Function Hall, Meeting Rooms 1 to 4, the
+Admissions office and the café when they say "take me to ..."; for any other place, suggest asking nearby staff.
 You remember what a visitor tells you only during their visit; everything is forgotten when they
 tap Finish or walk away, so never claim to remember earlier visitors or past days.'''
 
@@ -200,6 +202,24 @@ class OllamaChat:
                 logger.warning('Ollama unavailable (%s); retrying in %d s', error, delay)
                 time.sleep(delay)
         raise AssertionError('unreachable: the last attempt returns or raises')
+
+    def choose(self, system, text, choices):
+        """One of `choices` for the visitor's words, forced by a JSON schema; None if the model strays."""
+        schema = {'type': 'object', 'properties': {'choice': {'type': 'string', 'enum': list(choices)}},
+                  'required': ['choice']}
+        response = self._chat(
+            model=self.settings.model, think=False, format=schema, keep_alive=self.settings.keep_alive,
+            messages=[{'role': 'system', 'content': system}, {'role': 'user', 'content': f'Visitor: {text}'}],
+            options={'temperature': 0.0, 'num_predict': 24, 'num_ctx': self.settings.num_ctx},
+        )
+        message = response['message']
+        if hasattr(message, 'model_dump'):
+            message = message.model_dump(exclude_none=True)
+        try:
+            choice = json.loads(message.get('content') or '{}').get('choice')
+        except (ValueError, AttributeError):
+            return None
+        return choice if choice in choices else None
 
     def answer(self, question, context, history, language='en', tools=None, reference='', social=False):
         settings = self.settings
