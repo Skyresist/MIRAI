@@ -216,8 +216,8 @@ class Assistant:
         self.memory = memory if memory is not None else Memory(session=settings.session)
         self.chat = chat or OllamaChat(settings)
         self.glossary = glossary or Glossary(settings.glossary_path)
-        if navigator is None and settings.nav_url:
-            navigator = navigation.Navigator(settings.nav_url, self.chat)
+        if navigator is None and settings.nav_port:
+            navigator = navigation.Navigator(settings.nav_port, self.chat, settings.nav_baud)
         self.navigator = navigator
 
     def ask(self, question: str, language: str | None = None) -> Answer:

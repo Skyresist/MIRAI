@@ -1,8 +1,11 @@
 from dataclasses import dataclass
+import json
 import logging
 import re
+import threading
+import time
 
-import httpx
+import serial
 
 logger = logging.getLogger(__name__)
 
@@ -122,10 +125,11 @@ def parse(text: str) -> Command | None:
 
 
 class Navigator:
-    def __init__(self, url: str, chat=None, client: httpx.Client | None = None):
-        self.url = url.rstrip('/')
+    def __init__(self, port: str, chat=None, baud: int = 115200, link=None, timeout: float = 10.0):
+        self.port, self.baud, self.timeout = port, baud, timeout
         self.chat = chat
-        self.http = client or httpx.Client(timeout=6.0)
+        self.link = link
+        self.lock = threading.Lock()
 
     def pick_place(self, text: str) -> str | None:
         if self.chat is None:
@@ -136,12 +140,36 @@ class Navigator:
             logger.warning('Place pick failed: %s', error)
             return None
 
-    def send(self, path: str, body: dict | None = None) -> tuple[int, dict]:
-        try:
-            response = self.http.post(f'{self.url}{path}', json=body or {})
-            return response.status_code, response.json()
-        except (httpx.HTTPError, ValueError) as error:
-            logger.warning('Nav bridge unreachable at %s: %s', self.url, error)
+    def open(self):
+        if self.link is None:
+            self.link = serial.Serial(self.port, self.baud, timeout=1.0, write_timeout=2.0)
+        return self.link
+
+    def close(self):
+        if self.link is not None:
+            try:
+                self.link.close()
+            except Exception:
+                pass
+        self.link = None
+
+    def send(self, line: str) -> tuple[int, dict]:
+        with self.lock:
+            try:
+                link = self.open()
+                link.reset_input_buffer()
+                link.write(f'{line}\n'.encode())
+                deadline = time.monotonic() + self.timeout
+                while time.monotonic() < deadline:
+                    raw = link.readline()
+                    code, _, body = raw.decode(errors='replace').strip().partition(' ')
+                    if code.isdigit():
+                        reply = json.loads(body or '{}')
+                        return int(code), reply if isinstance(reply, dict) else {}
+                logger.warning('Nav bridge silent on %s', self.port)
+            except (serial.SerialException, OSError, ValueError) as error:
+                logger.warning('Nav link failed on %s: %s', self.port, error)
+                self.close()
             return 0, {}
 
     def handle(self, command: Command, text: str, language: str) -> tuple[str, dict]:
@@ -153,9 +181,9 @@ class Navigator:
             reply = REPLIES[command.action][language].format(place=place, short=SHORT.get(command.place, ''))
             return reply, {'action': command.action, 'place': command.place, 'ok': command.action == 'where'}
         if command.action == 'goto':
-            code, body = self.send('/goto', {'place': command.place})
+            code, body = self.send(f'GOTO {command.place}')
         else:
-            code, body = self.send(f'/{command.action}')
+            code, body = self.send(command.action.upper())
         place = PLACES.get(command.place, {}).get(language, '')
         if code == 200:
             reply = REPLIES[command.action][language].format(place=place)

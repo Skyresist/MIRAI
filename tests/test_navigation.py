@@ -1,8 +1,8 @@
 import json
 from unittest.mock import Mock
 
-import httpx
 import pytest
+import serial
 
 from assistant import Assistant
 from config import Settings
@@ -65,76 +65,106 @@ def test_questions_stay_with_the_faq(text):
     assert parse(text) is None
 
 
+class FakeLink:
+    def __init__(self, handler):
+        self.handler = handler
+        self.seen = []
+        self.replies = [b'200 {"stale": true}\n']
+
+    def reset_input_buffer(self):
+        self.replies.clear()
+
+    def write(self, data):
+        line = data.decode().strip()
+        self.seen.append(line)
+        code, reply = self.handler(line)
+        self.replies += [b'# noise\n', f'{code} {json.dumps(reply)}\n'.encode()]
+
+    def readline(self):
+        return self.replies.pop(0) if self.replies else b''
+
+    def close(self):
+        pass
+
+
 def bridge(handler):
-    seen = []
-
-    def respond(request):
-        body = json.loads(request.content or b'{}')
-        seen.append((request.url.path, body))
-        code, reply = handler(request.url.path, body)
-        return httpx.Response(code, json=reply)
-
-    client = httpx.Client(transport=httpx.MockTransport(respond))
-    return client, seen
+    link = FakeLink(handler)
+    return link, link.seen
 
 
-def ok(path, body):
+def ok(line):
     return 200, {'ok': True}
 
 
 def test_trip_is_sent_to_the_bridge():
-    client, seen = bridge(ok)
-    text, trip = Navigator('http://robot:8765/', client=client).handle(Command('goto', 'meeting_3'), '', 'en')
-    assert seen == [('/goto', {'place': 'meeting_3'})]
+    link, seen = bridge(ok)
+    text, trip = Navigator('/dev/fake', link=link).handle(Command('goto', 'meeting_3'), '', 'en')
+    assert seen == ['GOTO meeting_3']
     assert text == 'Sure, follow me to Meeting Room 3!'
     assert trip == {'action': 'goto', 'place': 'meeting_3', 'ok': True}
 
 
-@pytest.mark.parametrize('action, path', [('home', '/home'), ('patrol', '/patrol'), ('stop', '/stop')])
-def test_home_patrol_and_stop(action, path):
-    client, seen = bridge(ok)
-    text, trip = Navigator('http://robot:8765', client=client).handle(Command(action), '', 'id')
-    assert seen == [(path, {})] and trip['ok'] and text.startswith('Oke')
+@pytest.mark.parametrize('action, line', [('home', 'HOME'), ('patrol', 'PATROL'), ('stop', 'STOP')])
+def test_home_patrol_and_stop(action, line):
+    link, seen = bridge(ok)
+    text, trip = Navigator('/dev/fake', link=link).handle(Command(action), '', 'id')
+    assert seen == [line] and trip['ok'] and text.startswith('Oke')
 
 
 def test_place_without_coordinates_is_admitted_politely():
-    client, _ = bridge(lambda path, body: (404, {'error': 'no_spot', 'place': body['place']}))
-    text, trip = Navigator('http://robot', client=client).handle(Command('goto', 'marketing'), '', 'en')
+    link, _ = bridge(lambda line: (404, {'error': 'no_spot', 'place': line.split()[1]}))
+    text, trip = Navigator('/dev/fake', link=link).handle(Command('goto', 'marketing'), '', 'en')
     assert text == "Sorry, I don't know the way to the Marketing office yet. Please ask the staff nearby."
     assert not trip['ok']
 
 
 def test_unreachable_robot_says_it_cannot_move():
-    def down(request):
-        raise httpx.ConnectError('no route', request=request)
-
-    navigator = Navigator('http://robot', client=httpx.Client(transport=httpx.MockTransport(down)))
+    navigator = Navigator('/dev/no-such-port')
     text, trip = navigator.handle(Command('home'), '', 'en')
+    assert text == "Sorry, I can't move right now. Please ask the staff nearby." and not trip['ok']
+    assert navigator.link is None
+
+
+def test_silent_robot_says_it_cannot_move():
+    link = FakeLink(ok)
+    link.write = lambda data: None
+    text, trip = Navigator('/dev/fake', link=link, timeout=0.2).handle(Command('stop'), '', 'en')
     assert text == "Sorry, I can't move right now. Please ask the staff nearby." and not trip['ok']
 
 
+def test_broken_cable_reopens_next_time():
+    link = FakeLink(ok)
+
+    def unplugged(data):
+        raise serial.SerialException('device disconnected')
+
+    link.write = unplugged
+    navigator = Navigator('/dev/fake', link=link)
+    assert navigator.send('STATUS') == (0, {}) and navigator.link is None
+
+
 def test_llm_picks_the_place_the_patterns_missed():
-    client, seen = bridge(ok)
+    link, seen = bridge(ok)
     chat = Mock()
     chat.choose.return_value = 'cafe'
-    text, trip = Navigator('http://robot', chat=chat, client=client).handle(
+    text, trip = Navigator('/dev/fake', chat=chat, link=link).handle(
         Command('unknown'), "I'm hungry, take me somewhere to eat", 'en')
-    assert seen == [('/goto', {'place': 'cafe'})] and trip['place'] == 'cafe'
+    assert seen == ['GOTO cafe'] and trip['place'] == 'cafe'
     assert 'cafe' in chat.choose.call_args.args[2] and 'none' in chat.choose.call_args.args[2]
 
 
 def test_llm_finding_nothing_moves_nothing():
-    client, seen = bridge(ok)
+    link, seen = bridge(ok)
     chat = Mock()
     chat.choose.return_value = 'none'
-    text, trip = Navigator('http://robot', chat=chat, client=client).handle(
+    text, trip = Navigator('/dev/fake', chat=chat, link=link).handle(
         Command('unknown'), 'take me to the moon', 'en')
     assert seen == [] and text == "Sorry, I don't know the way there. Please ask the staff nearby."
 
 
 def test_where_and_which_meeting_answer_without_moving():
-    client, seen = bridge(ok)
-    navigator = Navigator('http://robot', client=client)
+    link, seen = bridge(ok)
+    navigator = Navigator('/dev/fake', link=link)
     text, _ = navigator.handle(Command('where', 'cafe'), '', 'en')
     assert text == 'I can take you to the café. Just say "take me to café" and follow me.'
     text, _ = navigator.handle(Command('which_meeting'), '', 'id')
@@ -166,9 +196,9 @@ def test_assistant_walks_instead_of_searching(tmp_path):
     assert assistant.memory.recent(2, 1000)[-1]['content'] == 'Sure, follow me to the café!'
 
 
-def test_empty_nav_url_turns_walking_off(tmp_path):
+def test_empty_nav_port_turns_walking_off(tmp_path):
     chat = Mock()
     chat.answer.return_value = 'Please ask the staff nearby.'
-    assistant = Assistant(Settings(state_dir=tmp_path, nav_url=''), Retriever([]), chat=chat, glossary=Glossary())
+    assistant = Assistant(Settings(state_dir=tmp_path, nav_port=''), Retriever([]), chat=chat, glossary=Glossary())
     assert assistant.navigator is None
     assert assistant.ask('Mirai stop!', 'en').navigation is None

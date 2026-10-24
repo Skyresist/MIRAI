@@ -121,7 +121,7 @@ MIRAI can lead a visitor to a place, patrol, go back home and stop, by voice or 
 | *"Back to home"*, *"Pulang"* | Goes back to its spot |
 | *"Stop"*, *"Berhenti"* | Stops right there |
 
-`navigation.py` recognises these before the FAQ search. When a trip names no place it knows (*"I'm hungry, take me somewhere"*), Qwen picks one from the list. Commands go over HTTP to the `nav_bridge` node on the robot's ROS 2 computer (`ros2 run mirai_base nav_bridge`), which holds the map coordinates in `mirai_bringup/config/places.yaml`. Set `MIRAI_NAV_URL` (default `http://miraimirai.local:8765`) to reach it, or set it empty to turn walking off.
+`navigation.py` recognises these before the FAQ search. When a trip names no place it knows (*"I'm hungry, take me somewhere"*), Qwen picks one from the list. Commands go over a serial cable to the `nav_bridge` node on the robot's Raspberry Pi (`ros2 run mirai_base nav_bridge`), which holds the map coordinates in `mirai_bringup/config/places.yaml`. Each command is one text line (`GOTO cafe`, `HOME`, `PATROL`, `STOP`, `STATUS`, `PLACES`) and the Pi answers with one line: a status code and JSON, e.g. `200 {"ok": true, "action": "goto", "place": "cafe"}`. Set `MIRAI_NAV_PORT` (default `/dev/ttyTHS1`, the Jetson's UART on the 40-pin header) and `MIRAI_NAV_BAUD` (default `115200`), or set the port empty to turn walking off. The Jetson user needs to be in the `dialout` group.
 
 ## Project layout
 
