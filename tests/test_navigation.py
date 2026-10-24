@@ -202,3 +202,16 @@ def test_empty_nav_port_turns_walking_off(tmp_path):
     assistant = Assistant(Settings(state_dir=tmp_path, nav_port=''), Retriever([]), chat=chat, glossary=Glossary())
     assert assistant.navigator is None
     assert assistant.ask('Mirai stop!', 'en').navigation is None
+
+
+def test_poll_asks_status_and_keeps_robot_put_while_chatting():
+    link, seen = bridge(lambda line: (200, {'mode': 'idle', 'visitor': 'arrived'}))
+    navigator = Navigator('/dev/fake', link=link)
+    assert navigator.poll()['visitor'] == 'arrived'
+    navigator.poll(busy=True)
+    assert navigator.done()
+    assert seen == ['STATUS', 'BUSY', 'DONE']
+
+
+def test_poll_without_robot_is_empty():
+    assert Navigator('/dev/no-such-port').poll() == {}

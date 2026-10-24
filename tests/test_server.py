@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import time
 from unittest.mock import Mock
 
 import pytest
@@ -111,3 +112,37 @@ def test_ui_is_served(client):
     assert page.status_code == 200 and 'MIRAI' in page.text
     assert client.get('/app.js').headers['cache-control'] == 'no-cache'  # Updates reach the kiosk screen.
     assert client.get('/api/status').json()['knowledge'] is True
+
+
+def test_robot_arrival_asks_screen_to_greet_until_visit_starts(client):
+    kiosk = client.app.state.kiosk
+    kiosk.navigator = Mock()
+    kiosk.navigator.poll.return_value = {'visitor': 'arrived'}
+    kiosk.closing.set()
+    kiosk.greet = not kiosk.visiting and kiosk.navigator.poll(busy=kiosk.visiting).get('visitor') == 'arrived'
+    assert client.get('/api/status').json()['greet'] is True
+    assert client.post('/api/visit').json() == {'ok': True}
+    assert kiosk.visiting and client.get('/api/status').json()['greet'] is False
+    client.post('/api/reset')
+    assert not kiosk.visiting
+    for _ in range(50):
+        if kiosk.navigator.done.called:
+            break
+        time.sleep(0.01)
+    kiosk.navigator.done.assert_called_once()
+
+
+def test_watcher_sends_busy_while_visiting_and_ends_stale_visits(client):
+    kiosk = client.app.state.kiosk
+    kiosk.closing.set()
+    kiosk.navigator = Mock()
+    kiosk.navigator.poll.return_value = {}
+    kiosk.closing = Mock()
+    kiosk.closing.wait.side_effect = [False, False, True]
+    kiosk.start_visit()
+    kiosk.watch_robot()
+    assert [c.kwargs['busy'] for c in kiosk.navigator.poll.call_args_list] == [True, True]
+    kiosk.closing.wait.side_effect = [False, True]
+    kiosk.last_activity -= kiosk.idle_timeout + 60
+    kiosk.watch_robot()
+    assert not kiosk.visiting and kiosk.navigator.poll.call_args.kwargs['busy'] is False

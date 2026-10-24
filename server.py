@@ -56,6 +56,26 @@ class Kiosk:
         self.voice = not arguments.no_voice
         self._speech = None
         self._speech_error = None
+        self.navigator = self.assistant.navigator
+        self.visiting = False
+        self.greet = False
+        self.closing = threading.Event()
+
+    def watch_robot(self):
+        while not self.closing.wait(1.0):
+            if self.visiting and time.monotonic() - self.last_activity > self.idle_timeout + 15:
+                self.end_visit()
+            status = self.navigator.poll(busy=self.visiting)
+            self.greet = not self.visiting and status.get('visitor') == 'arrived'
+
+    def start_visit(self):
+        self.visiting, self.greet = True, False
+        self.last_activity = time.monotonic()
+
+    def end_visit(self):
+        was, self.visiting, self.greet = self.visiting, False, False
+        if was and self.navigator is not None:
+            threading.Thread(target=self.navigator.done, daemon=True).start()
 
     @property
     def speech(self):
@@ -93,6 +113,7 @@ class Kiosk:
             logger.warning('Could not preload %s: %s', self.settings.model, error)
 
     def close(self):
+        self.closing.set()
         self.visitor.__exit__(None, None, None)
         for path in self.audio_dir.glob('*'):
             path.unlink(missing_ok=True)
@@ -106,6 +127,8 @@ def create_app(arguments, preload=True) -> FastAPI:
     async def lifespan(_):
         if preload:
             threading.Thread(target=kiosk.preload, daemon=True).start()
+        if kiosk.navigator is not None:
+            threading.Thread(target=kiosk.watch_robot, daemon=True).start()
         yield
         kiosk.close()
 
@@ -125,7 +148,12 @@ def create_app(arguments, preload=True) -> FastAPI:
     def status():
         return {'model': kiosk.settings.model, 'knowledge': kiosk.retriever.has_data(),
                 'voice': kiosk.voice and kiosk._speech_error is None, 'voice_error': kiosk._speech_error,
-                'idle_timeout': kiosk.idle_timeout, 'busy': kiosk.lock.locked()}
+                'idle_timeout': kiosk.idle_timeout, 'busy': kiosk.lock.locked(), 'greet': kiosk.greet}
+
+    @api.post('/api/visit')
+    def visit():
+        kiosk.start_visit()
+        return {'ok': True}
 
     @api.post('/api/ask')
     def ask(question: Question):
@@ -203,6 +231,7 @@ def create_app(arguments, preload=True) -> FastAPI:
     def reset():
         with kiosk.lock:
             kiosk.visitor.reset()
+        kiosk.end_visit()
         return {'ok': True}
 
     if STATIC.is_dir():

@@ -153,24 +153,33 @@ class Navigator:
                 pass
         self.link = None
 
-    def send(self, line: str) -> tuple[int, dict]:
+    def send(self, line: str, timeout: float | None = None, quiet: bool = False) -> tuple[int, dict]:
         with self.lock:
             try:
                 link = self.open()
                 link.reset_input_buffer()
                 link.write(f'{line}\n'.encode())
-                deadline = time.monotonic() + self.timeout
+                deadline = time.monotonic() + (self.timeout if timeout is None else timeout)
                 while time.monotonic() < deadline:
                     raw = link.readline()
                     code, _, body = raw.decode(errors='replace').strip().partition(' ')
                     if code.isdigit():
                         reply = json.loads(body or '{}')
                         return int(code), reply if isinstance(reply, dict) else {}
-                logger.warning('Nav bridge silent on %s', self.port)
+                if not quiet:
+                    logger.warning('Nav bridge silent on %s', self.port)
             except (serial.SerialException, OSError, ValueError) as error:
-                logger.warning('Nav link failed on %s: %s', self.port, error)
+                if not quiet:
+                    logger.warning('Nav link failed on %s: %s', self.port, error)
                 self.close()
             return 0, {}
+
+    def poll(self, busy: bool = False) -> dict:
+        code, body = self.send('BUSY' if busy else 'STATUS', timeout=2.0, quiet=True)
+        return body if code == 200 else {}
+
+    def done(self) -> bool:
+        return self.send('DONE', timeout=2.0, quiet=True)[0] == 200
 
     def handle(self, command: Command, text: str, language: str) -> tuple[str, dict]:
         if command.action == 'unknown':
