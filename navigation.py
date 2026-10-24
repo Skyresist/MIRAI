@@ -1,8 +1,3 @@
-"""Walking visitors around: spot a navigation command, send it to the robot's nav bridge, say what happens.
-
-The bridge is the `nav_bridge` node on the robot's ROS 2 computer (mirai_base). It owns the map
-coordinates; this side only knows place names and how visitors say them.
-"""
 from dataclasses import dataclass
 import logging
 import re
