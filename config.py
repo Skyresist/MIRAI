@@ -14,7 +14,6 @@ CHAT_MODEL = BASE_MODEL
 class Settings:
     model: str = field(default_factory=lambda: os.getenv('MIRAI_MODEL', CHAT_MODEL))
     ollama_host: str = field(default_factory=lambda: os.getenv('OLLAMA_HOST', 'http://127.0.0.1:11434'))
-    # The robot's nav_bridge (mirai_base). Empty turns walking off: trip requests then go to the LLM.
     nav_url: str = field(default_factory=lambda: os.getenv('MIRAI_NAV_URL', 'http://miraimirai.local:8765'))
     pdf_dir: Path = field(default_factory=lambda: Path(os.getenv('MIRAI_PDF_DIR', str(ROOT / 'data/pdfs'))))
     state_dir: Path = field(default_factory=lambda: Path(os.getenv('MIRAI_STATE_DIR', str(ROOT / '.mirai'))))

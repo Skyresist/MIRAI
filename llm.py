@@ -204,7 +204,6 @@ class OllamaChat:
         raise AssertionError('unreachable: the last attempt returns or raises')
 
     def choose(self, system, text, choices):
-        """One of `choices` for the visitor's words, forced by a JSON schema; None if the model strays."""
         schema = {'type': 'object', 'properties': {'choice': {'type': 'string', 'enum': list(choices)}},
                   'required': ['choice']}
         response = self._chat(
