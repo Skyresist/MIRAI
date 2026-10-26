@@ -9,6 +9,7 @@ const TEXT = {
     welcome: 'Halo! Aku MIRAI, siap membantu mencari informasi tentang BINUS ASO.',
     stillThere: 'Masih di sana? Sentuh layar untuk melanjutkan.',
     greeting: 'Halo! Aku bisa membantu mencari informasi tentang BINUS ASO. Tekan Mulai Bertanya, ketik, atau pilih Topik Populer.',
+    offerHelp: 'Halo! Ada yang bisa aku bantu?',
     tapToTalk: 'Tekan Mulai Bertanya untuk bertanya', listening: 'Aku mendengarkan… tekan Selesai Bicara kalau sudah',
     transcribing: 'Memproses suara…', thinking: 'Sebentar, aku sedang mencari jawabannya', speaking: 'MIRAI sedang menjawab… tekan tombol oranye untuk memotong',
     noSpeech: 'Maaf, saya tidak mendengar dengan jelas. Coba lagi lebih dekat ke mikrofon.',
@@ -25,6 +26,7 @@ const TEXT = {
     welcome: "Hi! I'm MIRAI, here to help you find information about BINUS ASO.",
     stillThere: 'Still there? Touch the screen to continue.',
     greeting: 'Hi! I can help you find information about BINUS ASO. Tap Start Asking, type, or pick a Popular Topic.',
+    offerHelp: 'Hi! Do you need any help?',
     tapToTalk: 'Tap Start Asking to ask a question', listening: "I'm listening… tap Done Talking when you finish",
     transcribing: 'Processing your voice…', thinking: 'One moment, I am looking for the answer', speaking: 'MIRAI is answering… tap the orange button to interrupt',
     noSpeech: "Sorry, I didn't catch that. Please try again closer to the microphone.",
@@ -413,16 +415,34 @@ function resetIdle() {
   }, state.idleSeconds * 1000);
 }
 
-function startVisit(language) {
+function startVisit(language, greeting = 'greeting') {
   applyLanguage(language);
   closePopups();
   $('#welcome').hidden = true;
   $('#canvas').classList.remove('welcome-visible');
   $('#chat').hidden = false;
-  addMessage('mirai', t('greeting'), { greeting: true });
+  addMessage('mirai', t(greeting), { greeting: true });
   setFace('happy', 2000);
   resetIdle();
-  if (state.voice) recorder.open().catch(() => setStatus(t('micBlocked'), true));
+  api('/api/visit', { method: 'POST' }).catch(() => {});
+  if (state.voice) return recorder.open().catch(() => setStatus(t('micBlocked'), true));
+  return Promise.resolve();
+}
+
+async function offerHelp() {
+  await startVisit(state.language, 'offerHelp');
+  if (!state.voice) return;
+  await speak(t('offerHelp'), state.language);
+  if (!$('#chat').hidden && !state.busy && !state.audio && !recorder.recording) onMic();
+}
+
+function watchRobot() {
+  setInterval(() => {
+    if (!$('#chat').hidden) return;
+    api('/api/status').then((response) => response.json()).then((status) => {
+      if (status.greet && $('#chat').hidden) offerHelp();
+    }).catch(() => {});
+  }, 1000);
 }
 
 // Touching anywhere on the sleeping screen wakes MIRAI (the "..." menu is not part of it).
@@ -471,3 +491,4 @@ api('/api/status').then((response) => response.json()).then((status) => {
 applyLanguage('id');
 setFace('sleeping');
 $('#canvas').classList.add('welcome-visible');
+watchRobot();

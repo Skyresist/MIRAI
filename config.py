@@ -14,6 +14,8 @@ CHAT_MODEL = BASE_MODEL
 class Settings:
     model: str = field(default_factory=lambda: os.getenv('MIRAI_MODEL', CHAT_MODEL))
     ollama_host: str = field(default_factory=lambda: os.getenv('OLLAMA_HOST', 'http://127.0.0.1:11434'))
+    nav_port: str = field(default_factory=lambda: os.getenv('MIRAI_NAV_PORT', '/dev/ttyTHS1'))
+    nav_baud: int = field(default_factory=lambda: int(os.getenv('MIRAI_NAV_BAUD', '115200')))
     pdf_dir: Path = field(default_factory=lambda: Path(os.getenv('MIRAI_PDF_DIR', str(ROOT / 'data/pdfs'))))
     state_dir: Path = field(default_factory=lambda: Path(os.getenv('MIRAI_STATE_DIR', str(ROOT / '.mirai'))))
     glossary_path: Path = ROOT / 'glossary.json'

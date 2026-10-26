@@ -11,7 +11,7 @@ Ask it a question in Bahasa Indonesia or English. It looks up the answer in the 
 ![Jetson](https://img.shields.io/badge/Runs%20on-Jetson%20Orin%20Nano%208GB-76B900?logo=nvidia&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/Kiosk-FastAPI-009688?logo=fastapi&logoColor=white)
 ![Offline](https://img.shields.io/badge/100%25-offline-orange)
-![Tests](https://img.shields.io/badge/tests-191%20passing-2ea44f)
+![Tests](https://img.shields.io/badge/tests-268%20passing-2ea44f)
 
 Designed and built by Yours Truly
 
@@ -61,7 +61,7 @@ flowchart LR
 - Follow-ups like *"program itu"* or *"which one?"* work because MIRAI keeps the current conversation in RAM. Ending the visit wipes it.
 - It fits in 8 GB: quantized ONNX embeddings, a small context window, and models that stay loaded so the first visitor doesn't wait. The page speaks each sentence while the next one is still being generated.
 - The face is a glowing box with eyes that sleep, listen, think, look confused and smile when tapped. Answers appear inside the box.
-- There are 191 pytest tests, plus evaluation scripts for retrieval, a 26-turn conversation and speech recognition.
+- There are 268 pytest tests, plus evaluation scripts for retrieval, a 26-turn conversation and speech recognition.
 
 ## Hardware
 
@@ -110,11 +110,25 @@ The kiosk page uses these endpoints on `http://127.0.0.1:8000`, and the robot's 
 | `POST /api/reset` | Forget the current visitor |
 | `GET /api/status` | Ready or busy |
 
+## Walking visitors around
+
+MIRAI can lead a visitor to a place, patrol, go back home and stop, by voice or typed text, in either language:
+
+| Say | Does |
+|---|---|
+| *"Bring me to Marketing"*, *"Antar aku ke ruang meeting 3"*, *"Get me to the café"* | Walks to Marketing, the Multi-Function Hall, Meeting Rooms 1-4, Admisi or the café |
+| *"Patrol"*, *"Mulai patroli"* | Starts the patrol round |
+| *"Back to home"*, *"Pulang"* | Goes back to its spot |
+| *"Stop"*, *"Berhenti"* | Stops right there |
+
+`navigation.py` recognises these before the FAQ search. When a trip names no place it knows (*"I'm hungry, take me somewhere"*), Qwen picks one from the list. Commands go over a serial cable to the `nav_bridge` node on the robot's Raspberry Pi (`ros2 run mirai_base nav_bridge`), which holds the map coordinates in `mirai_bringup/config/places.yaml`. Each command is one text line (`GOTO cafe`, `HOME`, `PATROL`, `STOP`, `STATUS`, `PLACES`) and the Pi answers with one line: a status code and JSON, e.g. `200 {"ok": true, "action": "goto", "place": "cafe"}`. Set `MIRAI_NAV_PORT` (default `/dev/ttyTHS1`, the Jetson's UART on the 40-pin header) and `MIRAI_NAV_BAUD` (default `115200`), or set the port empty to turn walking off. The Jetson user needs to be in the `dialout` group.
+
 ## Project layout
 
 ```text
 server.py        FastAPI kiosk server: loads every model once, serves static/ and the API
 assistant.py     The brain: routing, follow-ups, search, safety checks on the answer
+navigation.py    Walking commands (take me to, patrol, home, stop) sent to the robot's nav bridge
 llm.py           Ollama chat, MIRAI's persona and prompts, fallback replies
 retriever.py     FAQ-aware chunking + hybrid search (embeddings + keywords)
 embeddings.py    e5 model specs, ONNX encoder, calibrated score cut-offs
@@ -131,7 +145,7 @@ tests/           pytest suite
 ## Checks
 
 ```bash
-.venv/bin/python -m pytest -q                              # 191 tests, no models needed
+.venv/bin/python -m pytest -q                              # 268 tests, no models needed
 .venv/bin/python scripts/eval_retrieval.py --backend onnx  # does each question find the right FAQ?
 .venv/bin/python scripts/eval_conversation.py              # 26-turn conversation with the real model
 .venv/bin/python scripts/eval_stt.py                       # Whisper accuracy on recorded questions
