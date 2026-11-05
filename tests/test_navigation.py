@@ -42,6 +42,19 @@ from retriever import Retriever
     ('Mirai stop!', 'stop', None),
     ('berhenti', 'stop', None),
     ('stop patrol', 'stop', None),
+    ('meet and greet', 'greet_on', None),
+    ('Meet n greet', 'greet_on', None),
+    ('Mirai, start meet and greet please', 'greet_on', None),
+    ('meet & greet mode', 'greet_on', None),
+    ('mulai sapa pengunjung', 'greet_on', None),
+    ('stop meet and greet', 'greet_off', None),
+    ('Meet and greet off', 'greet_off', None),
+    ('berhenti menyapa', 'greet_off', None),
+    ('follow me', 'follow', None),
+    ('Mirai, follow me please', 'follow', None),
+    ('come with me', 'follow', None),
+    ('ikuti aku', 'follow', None),
+    ('ikutin saya dong', 'follow', None),
 ])
 def test_commands_are_recognised(text, action, place):
     assert parse(text) == Command(action, place)
@@ -60,6 +73,8 @@ def test_commands_are_recognised(text, action, place):
     'what is the meeting schedule',
     'take me through the registration steps',
     'where is the campus?',
+    'what is the meet and greet event schedule?',
+    'who do I follow on instagram',
 ])
 def test_questions_stay_with_the_faq(text):
     assert parse(text) is None
@@ -215,3 +230,18 @@ def test_poll_asks_status_and_keeps_robot_put_while_chatting():
 
 def test_poll_without_robot_is_empty():
     assert Navigator('/dev/no-such-port').poll() == {}
+
+
+@pytest.mark.parametrize('action, line, start', [('greet_on', 'GREET ON', 'Okay, meet and greet is on'),
+                                                 ('greet_off', 'GREET OFF', 'Okay, meet and greet is off'),
+                                                 ('follow', 'FOLLOW', 'Okay, I will follow you')])
+def test_meet_greet_and_follow_lines(action, line, start):
+    link, seen = bridge(ok)
+    text, trip = Navigator('/dev/fake', link=link).handle(Command(action), '', 'en')
+    assert seen == [line] and trip['ok'] and text.startswith(start)
+
+
+def test_follow_without_anyone_in_front_asks_to_stand_there():
+    link, _ = bridge(lambda line: (404, {'error': 'no_person'}))
+    text, trip = Navigator('/dev/fake', link=link).handle(Command('follow'), '', 'id')
+    assert text.startswith('Aku belum melihatmu') and not trip['ok']

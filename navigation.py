@@ -60,6 +60,15 @@ STOP = whole_command(
     r"stop(?:\s+(?:moving|walking|driving|here|now|it|the\s+patrol|patrol\w*))?|halt|freeze|"
     r"cancel(?:\s+(?:the\s+)?(?:trip|patrol|navigation))?|"
     r"berhenti(?:\s+(?:di\s?sini|patroli|bergerak|jalan))?|jangan\s+(?:jalan|bergerak)")
+MEET = r"meet\s*(?:and|n|&|'n'?)\s*greet(?:ing)?"
+GREET_OFF = whole_command(
+    rf"(?:stop|end|turn\s+off|switch\s+off|no\s+more|berhenti|matikan|selesai)\s+(?:the\s+|mode\s+)?{MEET}(?:\s+mode)?|"
+    rf"{MEET}(?:\s+mode)?\s+off|(?:stop|berhenti)\s+(?:greeting|menyapa)(?:\s+(?:people|pengunjung|tamu))?")
+GREET_ON = whole_command(
+    rf"(?:(?:start|begin|do|turn\s+on|switch\s+on|mulai|nyalakan|aktifkan)\s+)?(?:the\s+|mode\s+)?{MEET}(?:\s+(?:mode|on))?|"
+    r"(?:mulai\s+)?(?:sapa|menyapa)\s+(?:pengunjung|tamu)")
+FOLLOW = whole_command(
+    r"follow\s+(?:me|us)|come\s+with\s+me|(?:ikuti|ikutin|ikut)\s+(?:aku|saya|kami|gue|gw)")
 
 REPLIES = {
     'goto': {'en': 'Sure, follow me to {place}!', 'id': 'Oke, ikuti aku ke {place} ya!'},
@@ -75,7 +84,15 @@ REPLIES = {
                 'id': 'Maaf, aku belum tahu jalan ke {place}. Silakan tanya staf di sekitar ya.'},
     'offline': {'en': "Sorry, I can't move right now. Please ask the staff nearby.",
                 'id': 'Maaf, aku belum bisa bergerak sekarang. Silakan tanya staf di sekitar ya.'},
+    'greet_on': {'en': "Okay, meet and greet is on. I'll go say hi to visitors.",
+                 'id': 'Oke, mode sapa pengunjung aktif. Aku akan menyapa pengunjung.'},
+    'greet_off': {'en': 'Okay, meet and greet is off.', 'id': 'Oke, mode sapa pengunjung mati.'},
+    'follow': {'en': 'Okay, I will follow you. Say stop when you want me to stop.',
+               'id': 'Oke, aku ikuti kamu. Bilang berhenti kalau sudah.'},
+    'no_person': {'en': "I can't see you. Please stand in front of me and say follow me again.",
+                  'id': 'Aku belum melihatmu. Berdiri di depanku lalu bilang ikuti aku lagi ya.'},
 }
+LINES = {'greet_on': 'GREET ON', 'greet_off': 'GREET OFF', 'follow': 'FOLLOW'}
 SHORT = {'marketing': 'Marketing', 'multi_function_hall': 'Multi-Function Hall', 'admission': 'Admisi',
          'cafe': 'café', **{f'meeting_{n}': f'meeting {n}' for n in range(1, 5)}}
 
@@ -108,7 +125,8 @@ def find_place(text: str) -> str | None:
 
 def parse(text: str) -> Command | None:
     text = text.strip()
-    for action, pattern in (('stop', STOP), ('home', HOME), ('patrol', PATROL)):
+    for action, pattern in (('greet_off', GREET_OFF), ('greet_on', GREET_ON), ('follow', FOLLOW),
+                            ('stop', STOP), ('home', HOME), ('patrol', PATROL)):
         if pattern.fullmatch(text):
             return Command(action)
     place = find_place(text)
@@ -192,12 +210,14 @@ class Navigator:
         if command.action == 'goto':
             code, body = self.send(f'GOTO {command.place}')
         else:
-            code, body = self.send(command.action.upper())
+            code, body = self.send(LINES.get(command.action, command.action.upper()))
         place = PLACES.get(command.place, {}).get(language, '')
         if code == 200:
             reply = REPLIES[command.action][language].format(place=place)
         elif code == 404 and body.get('error') == 'no_spot':
             reply = REPLIES['no_spot'][language].format(place=place)
+        elif code == 404 and body.get('error') == 'no_person':
+            reply = REPLIES['no_person'][language]
         else:
             reply = REPLIES['offline'][language]
         return reply, {'action': command.action, 'place': command.place, 'ok': code == 200}
