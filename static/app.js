@@ -5,7 +5,8 @@ const TEXT = {
   id: {
     finish: 'Selesai', send: 'Kirim', cancel: '✕ Batal', placeholder: 'Ketik pertanyaan…', talk: 'Mulai bertanya', type: 'Ketik',
     stopTalking: 'Selesai bicara', topics: 'Topik populer', close: 'Tutup', typeLabel: 'Ketik pertanyaanmu',
-    touchStart: 'Sentuh layar untuk memulai',
+    touchStart: 'Sentuh layar atau sapa "Konnichiwa MIRAI"',
+    voiceGreeting: 'Konnichiwa! Aku MIRAI. Silakan tanya apa saja tentang BINUS ASO, aku mendengarkan.',
     welcome: 'Halo! Aku MIRAI, siap membantu mencari informasi tentang BINUS ASO.',
     stillThere: 'Masih di sana? Sentuh layar untuk melanjutkan.',
     greeting: 'Halo! Aku bisa membantu mencari informasi tentang BINUS ASO. Tekan Mulai Bertanya, ketik, atau pilih Topik Populer.',
@@ -22,7 +23,8 @@ const TEXT = {
   en: {
     finish: 'Finish', send: 'Send', cancel: '✕ Cancel', placeholder: 'Type a question…', talk: 'Start asking', type: 'Type',
     stopTalking: 'Done talking', topics: 'Popular topics', close: 'Close', typeLabel: 'Type your question',
-    touchStart: 'Touch the screen to start',
+    touchStart: 'Touch the screen or say "Konnichiwa MIRAI"',
+    voiceGreeting: "Konnichiwa! I'm MIRAI. Ask me anything about BINUS ASO, I'm listening.",
     welcome: "Hi! I'm MIRAI, here to help you find information about BINUS ASO.",
     stillThere: 'Still there? Touch the screen to continue.',
     greeting: 'Hi! I can help you find information about BINUS ASO. Tap Start Asking, type, or pick a Popular Topic.',
@@ -39,7 +41,7 @@ const TEXT = {
 };
 
 const $ = (selector) => document.querySelector(selector);
-const state = { language: 'id', busy: false, audio: null, idleTimer: null, warnTimer: null, idleSeconds: 120, voice: true, abort: null, undo: null, speaking: null, volume: 1 };
+const state = { language: 'id', busy: false, handsFree: false, misses: 0,audio: null, idleTimer: null, warnTimer: null, idleSeconds: 120, voice: true, abort: null, undo: null, speaking: null, volume: 1 };
 const recorder = new TapToTalkRecorder({
   onLevel: (level) => { $('.mic-level').style.borderWidth = `${Math.round(level * 18)}px`; $('.mic-level').style.inset = `${-Math.round(level * 18)}px`; },
 });
@@ -318,7 +320,7 @@ async function ask(question) {
     setBusy(false);
     setFace('idle');
     setStatus();
-    speak(answer.text, answer.language);
+    speak(answer.text, answer.language).then(listenAgain);
   } catch (error) {
     if (error.name === 'AbortError') return;  // cancel() already cleaned up.
     state.abort = state.undo = null;
@@ -360,7 +362,7 @@ async function onMic() {
     updateCancel();
   }
   if (!result) { setFace('idle'); return setStatus(); }
-  if (!result.heardSpeech) { setFace('confused', 2500); return setStatus(t('noSpeech'), true); }
+  if (!result.heardSpeech) return missed();
   state.abort = new AbortController();
   setBusy(true);
   setFace('thinking');
@@ -372,7 +374,8 @@ async function onMic() {
     const transcript = await (await api('/api/transcribe', { method: 'POST', body: form, signal: state.abort.signal })).json();
     state.abort = null;
     setBusy(false);
-    if (!transcript.text) { setFace('confused', 2500); return setStatus(t('noSpeech'), true); }
+    if (!transcript.text) return missed();
+    state.misses = 0;
     await ask(transcript.text);
   } catch (error) {
     if (error.name === 'AbortError') return;
@@ -383,9 +386,56 @@ async function onMic() {
   }
 }
 
+// A visit woken by voice is hands-free (the touchscreen may not work): MIRAI listens again after
+// each answer. Three silent tries in a row mean the visitor left, so it goes back to sleep.
+function listenAgain() {
+  if (!state.handsFree || $('#chat').hidden || state.busy || state.speaking || recorder.recording) return;
+  setTimeout(() => { if (state.handsFree && !$('#chat').hidden && !state.busy && !recorder.recording) onMic(); }, 400);
+}
+
+function missed() {
+  setFace('confused', 2500);
+  setStatus(t('noSpeech'), true);
+  if (!state.handsFree) return;
+  if (++state.misses >= 3) return endVisit();
+  listenAgain();
+}
+
+// While the welcome screen shows, MIRAI listens for "Konnichiwa MIRAI". Whisper spells it many ways
+// (konnichiwa, konichiwa, koniciwa, こんにちは); either the greeting or the name is enough.
+const WAKE = /k[ou]n+[iy]?c?h?[iy]w?[ae]|mirai|こんにちは|ミライ|みらい/;
+const heardWakePhrase = (text) => WAKE.test((text || '').toLowerCase().replace(/[^a-z぀-ヿ]/g, ''));
+let wakeListening = false;
+
+async function listenForWake() {
+  if (wakeListening || !state.voice) return;
+  wakeListening = true;
+  try {
+    while (!$('#welcome').hidden) {
+      try {
+        const result = await recorder.record();
+        if ($('#welcome').hidden) break;  // Someone touched the screen meanwhile.
+        if (!result?.heardSpeech) continue;
+        const form = new FormData();
+        form.append('audio', result.blob, result.blob.type.includes('ogg') ? 'speech.ogg' : 'speech.webm');
+        form.append('language', 'id');  // Auto-detect may hear Japanese and answer in kana; id keeps romaji.
+        const transcript = await (await api('/api/transcribe', { method: 'POST', body: form })).json();
+        if (!$('#welcome').hidden && heardWakePhrase(transcript.text)) offerHelp('voiceGreeting');
+      } catch (error) {
+        console.warn('Wake listening paused:', error);  // Mic or server not ready yet; try again shortly.
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
+  } finally {
+    wakeListening = false;
+  }
+}
+
 // One visitor at a time: finishing or walking away clears memory and returns to the welcome screen.
 async function endVisit() {
   clearTimeout(state.idleTimer); clearTimeout(state.warnTimer);
+  state.handsFree = false;
+  state.misses = 0;
   recorder.cancel();
   stopSpeaking();
   showKeyboard(false);
@@ -398,6 +448,7 @@ async function endVisit() {
   $('#welcome').hidden = false;
   $('#canvas').classList.add('welcome-visible');
   try { await api('/api/reset', { method: 'POST' }); } catch (error) { console.warn('Reset failed:', error); }
+  listenForWake();
 }
 
 function resetIdle() {
@@ -415,7 +466,10 @@ function resetIdle() {
   }, state.idleSeconds * 1000);
 }
 
-function startVisit(language, greeting = 'greeting') {
+function startVisit(language, greeting = 'greeting', handsFree = false) {
+  recorder.cancel();  // Stop the wake listener: the visit now owns the microphone.
+  state.handsFree = handsFree;
+  state.misses = 0;
   applyLanguage(language);
   closePopups();
   $('#welcome').hidden = true;
@@ -429,11 +483,13 @@ function startVisit(language, greeting = 'greeting') {
   return Promise.resolve();
 }
 
-async function offerHelp() {
-  await startVisit(state.language, 'offerHelp');
+// Started without a tap (the robot reached a visitor, or someone said "Konnichiwa MIRAI"): say
+// hello, then listen hands-free, since the touchscreen may not work.
+async function offerHelp(greeting = 'offerHelp') {
+  await startVisit(state.language, greeting, true);
   if (!state.voice) return;
-  await speak(t('offerHelp'), state.language);
-  if (!$('#chat').hidden && !state.busy && !state.audio && !recorder.recording) onMic();
+  await speak(t(greeting), state.language);
+  listenAgain();
 }
 
 function watchRobot() {
@@ -487,7 +543,7 @@ api('/api/status').then((response) => response.json()).then((status) => {
   state.idleSeconds = status.idle_timeout || state.idleSeconds;
   state.voice = status.voice !== false;
   $('#mic').hidden = !state.voice;
-}).catch(() => {});
+}).catch(() => {}).finally(listenForWake);
 applyLanguage('id');
 setFace('sleeping');
 $('#canvas').classList.add('welcome-visible');
