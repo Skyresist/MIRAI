@@ -11,9 +11,22 @@ class TapToTalkRecorder {
 
   async open() {
     if (this.stream) return;
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
+    const audio = { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    this.stream = await navigator.mediaDevices.getUserMedia({ audio });
+    // The OS default mic keeps changing at boot (C-Media adapter, built-in input), so pick the visitor mic,
+    // the ReSpeaker array, by name. Names are only visible once the first getUserMedia is allowed.
+    const mics = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === 'audioinput');
+    const wanted = mics.find((device) => /respeaker/i.test(device.label));
+    if (wanted && wanted.deviceId !== this.stream.getAudioTracks()[0]?.getSettings().deviceId) {
+      this.stream.getTracks().forEach((track) => track.stop());
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: { ...audio, deviceId: { exact: wanted.deviceId } } });
+      } catch (error) {
+        console.warn('ReSpeaker could not be opened; using the default mic:', error);
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio });
+      }
+    }
+    console.info('Microphone:', this.stream.getAudioTracks()[0]?.label);
     this.context = new AudioContext();
     const source = this.context.createMediaStreamSource(this.stream);
     this.analyser = this.context.createAnalyser();
