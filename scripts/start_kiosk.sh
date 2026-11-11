@@ -61,12 +61,17 @@ if [[ "$browser" != true ]]; then
 fi
 
 export DISPLAY="${DISPLAY:-:0}"
-# After every reboot Ubuntu picks the Jetson's built-in input (nothing plugged in: silence) as the
-# default mic, and the browser uses the default. Wait (up to 60 s) for the USB mic, then make it the default.
+# After every reboot Ubuntu picks the wrong input as the default mic, and the browser uses the default.
+# The visitor mic is the ReSpeaker 4-mic array; the C-Media USB adapter also has an input, and it shows
+# up first. Wait (up to 60 s) for the ReSpeaker; after 15 s without it, settle for any USB mic.
 if command -v pactl >/dev/null 2>&1; then
-    for _ in $(seq 60); do
+    for second in $(seq 60); do
         # || true: at boot the sound server may not be up yet, and set -e must not end the kiosk.
-        usb_mic="$(pactl list short sources 2>/dev/null | awk '$2 ~ /^alsa_input\..*usb/ {print $2; exit}' || true)"
+        sources="$(pactl list short sources 2>/dev/null || true)"
+        usb_mic="$(awk '$2 ~ /^alsa_input\..*ReSpeaker/ {print $2; exit}' <<<"$sources")"
+        if [[ -z "$usb_mic" && "$second" -ge 15 ]]; then
+            usb_mic="$(awk '$2 ~ /^alsa_input\..*usb/ {print $2; exit}' <<<"$sources")"
+        fi
         [[ -n "$usb_mic" ]] && pactl set-default-source "$usb_mic" && break
         sleep 1
     done
