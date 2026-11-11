@@ -401,10 +401,10 @@ function missed() {
   listenAgain();
 }
 
-// While the welcome screen shows, MIRAI listens for "Konnichiwa MIRAI". Whisper spells it many ways
-// (konnichiwa, konichiwa, koniciwa, こんにちは); either the greeting or the name is enough.
-const WAKE = /k[ou]n+[iy]?c?h?[iy]w?[ae]|mirai|こんにちは|ミライ|みらい/;
-const heardWakePhrase = (text) => WAKE.test((text || '').toLowerCase().replace(/[^a-z぀-ヿ]/g, ''));
+// While the welcome screen shows, MIRAI listens for "Konnichiwa MIRAI", transcribed as Japanese
+// (こんにちは ミライ, or 未来, the kanji for "mirai"); romaji spellings are caught too. Either word is enough.
+const WAKE = /k[ou]n+[iy]?c?h?[iy]w?[ae]|mir[ae][iy]|こんにち|ミライ|みらい|未来/;
+const heardWakePhrase = (text) => WAKE.test((text || '').toLowerCase().replace(/[^a-z぀-ヿ未来]/g, ''));
 let wakeListening = false;
 
 async function listenForWake() {
@@ -413,13 +413,14 @@ async function listenForWake() {
   try {
     while (!$('#welcome').hidden) {
       try {
-        const result = await recorder.record();
+        // The phrase takes ~2 s. Longer talk is passers-by chatting: skip it, or Whisper (on the CPU)
+        // would run nonstop, slowing every answer and missing the phrase while it is busy.
+        const result = await recorder.record({ maxSpeechMs: 3500 });
         if ($('#welcome').hidden) break;  // Someone touched the screen meanwhile.
-        if (!result?.heardSpeech) continue;
+        if (!result?.heardSpeech || result.tooLong) continue;
         const form = new FormData();
         form.append('audio', result.blob, result.blob.type.includes('ogg') ? 'speech.ogg' : 'speech.webm');
-        form.append('wake', '1');  // Keep low-confidence text: the wake phrase isn't Indonesian.
-        form.append('language', 'id');  // Auto-detect may hear Japanese and answer in kana; id keeps romaji.
+        form.append('wake', '1');  // The server transcribes this as Japanese: こんにちは ミライ.
         const transcript = await (await api('/api/transcribe', { method: 'POST', body: form })).json();
         if (!$('#welcome').hidden && heardWakePhrase(transcript.text)) offerHelp('voiceGreeting');
       } catch (error) {

@@ -36,8 +36,9 @@ class TapToTalkRecorder {
     return Math.sqrt(sum / samples.length);
   }
 
-  // Resolves with { blob, heardSpeech }. Call stop() to finish early (second tap).
-  async record() {
+  // Resolves with { blob, heardSpeech, tooLong }. Call stop() to finish early (second tap).
+  // maxSpeechMs cuts off talk longer than that (tooLong: true), e.g. chatter while waiting for a wake phrase.
+  async record({ maxSpeechMs = Infinity } = {}) {
     await this.open();
     if (this.context.state === 'suspended') await this.context.resume();
     const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm']
@@ -48,7 +49,7 @@ class TapToTalkRecorder {
 
     return new Promise((resolve, reject) => {
       const started = performance.now();
-      let noiseFloor = 0, calibrationFrames = 0, heardSpeech = false, lastSpeech = started, cancelled = false;
+      let noiseFloor = 0, calibrationFrames = 0, heardSpeech = false, firstSpeech = 0, lastSpeech = started, cancelled = false, tooLong = false;
       const finish = () => recorder.state !== 'inactive' && recorder.stop();
       recorder.onerror = (event) => reject(event.error || new Error('Recording failed'));
       recorder.onstop = () => {
@@ -56,7 +57,7 @@ class TapToTalkRecorder {
         this.active = null;
         this.onLevel(0);
         if (cancelled) return resolve(null);
-        resolve({ blob: new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }), heardSpeech });
+        resolve({ blob: new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }), heardSpeech, tooLong });
       };
 
       const tick = () => {
@@ -66,11 +67,12 @@ class TapToTalkRecorder {
         } else {
           // Speech must stand clearly above this room's own background noise.
           const threshold = Math.max(0.015, noiseFloor * 2.5);
-          if (rms > threshold) { heardSpeech = true; lastSpeech = now; }
+          if (rms > threshold) { if (!heardSpeech) firstSpeech = now; heardSpeech = true; lastSpeech = now; }
           this.onLevel(Math.min(1, rms / (threshold * 3)));
           if ((heardSpeech && now - lastSpeech > this.silenceMs)
               || (!heardSpeech && now - started > this.noSpeechMs)
               || now - started > this.maxMs) return finish();
+          if (heardSpeech && now - firstSpeech > maxSpeechMs) { tooLong = true; return finish(); }
         }
         this.frame = requestAnimationFrame(tick);
       };

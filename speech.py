@@ -121,7 +121,7 @@ class Speech:
             str(audio_path), language=language, beam_size=self.settings.whisper_beam, temperature=0.0,
             vad_filter=True, vad_parameters={'min_silence_duration_ms': 300},
             condition_on_previous_text=False,
-            initial_prompt=self.glossary.initial_prompt,
+            initial_prompt=self.glossary.initial_prompt if strict else None,  # The hint is Indonesian.
         )
         segments = [segment for segment in segments if segment.no_speech_prob < 0.6]
         text = ' '.join(segment.text.strip() for segment in segments).strip()
