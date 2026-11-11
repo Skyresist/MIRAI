@@ -115,10 +115,10 @@ def test_only_a_far_off_transcript_asks_the_visitor_to_repeat(confidence, kept):
 
 def test_the_wake_phrase_survives_a_low_confidence_score():
     from glossary import Glossary
-    segment = SimpleNamespace(text='こんにちは、ミライ。', no_speech_prob=0.1, avg_logprob=-2.4)
+    segment = SimpleNamespace(text='Halo Mirai.', no_speech_prob=0.1, avg_logprob=-2.4)
     talker = Speech(SimpleNamespace(whisper_beam=1, min_confidence=-1.5), Glossary())
-    talker.whisper = Mock(transcribe=Mock(return_value=([segment], SimpleNamespace(language='ja'))))
-    assert 'ミライ' in talker.transcribe(Path(__file__), 'ja', strict=False)[0]
+    talker.whisper = Mock(transcribe=Mock(return_value=([segment], SimpleNamespace(language='id'))))
+    assert 'mirai' in talker.transcribe(Path(__file__), 'id', strict=False)[0].lower()
     assert talker.whisper.transcribe.call_args.kwargs['initial_prompt'] is None
 
 

@@ -85,7 +85,7 @@ def test_transcribe_passes_screen_language_and_cleans_up(client):
 
 def test_wake_listening_keeps_low_confidence_text(client):
     client.post('/api/transcribe', files={'audio': ('speech.webm', b'x', 'audio/webm')}, data={'language': 'id', 'wake': '1'})
-    assert client.speech.transcribe.call_args.args[1] == 'ja'
+    assert client.speech.transcribe.call_args.args[1] == 'id'
     assert client.speech.transcribe.call_args.kwargs == {'strict': False}
 
 

@@ -5,8 +5,8 @@ const TEXT = {
   id: {
     finish: 'Selesai', send: 'Kirim', cancel: '✕ Batal', placeholder: 'Ketik pertanyaan…', talk: 'Mulai bertanya', type: 'Ketik',
     stopTalking: 'Selesai bicara', topics: 'Topik populer', close: 'Tutup', typeLabel: 'Ketik pertanyaanmu',
-    touchStart: 'Sentuh layar atau sapa "Konnichiwa MIRAI"',
-    voiceGreeting: 'Konnichiwa!',
+    touchStart: 'Sentuh layar atau sapa "Halo MIRAI"',
+    voiceGreeting: 'Halo!',
     welcome: 'Halo! Aku MIRAI, siap membantu mencari informasi tentang BINUS ASO.',
     stillThere: 'Masih di sana? Sentuh layar untuk melanjutkan.',
     greeting: 'Halo! Aku bisa membantu mencari informasi tentang BINUS ASO. Tekan Mulai Bertanya, ketik, atau pilih Topik Populer.',
@@ -23,8 +23,8 @@ const TEXT = {
   en: {
     finish: 'Finish', send: 'Send', cancel: '✕ Cancel', placeholder: 'Type a question…', talk: 'Start asking', type: 'Type',
     stopTalking: 'Done talking', topics: 'Popular topics', close: 'Close', typeLabel: 'Type your question',
-    touchStart: 'Touch the screen or say "Konnichiwa MIRAI"',
-    voiceGreeting: 'Konnichiwa!',
+    touchStart: 'Touch the screen or say "Halo MIRAI"',
+    voiceGreeting: 'Hello!',
     welcome: "Hi! I'm MIRAI, here to help you find information about BINUS ASO.",
     stillThere: 'Still there? Touch the screen to continue.',
     greeting: 'Hi! I can help you find information about BINUS ASO. Tap Start Asking, type, or pick a Popular Topic.',
@@ -401,17 +401,17 @@ function missed() {
   listenAgain();
 }
 
-// While the welcome screen shows, MIRAI listens for "Konnichiwa MIRAI", transcribed as Japanese
-// (こんにちは ミライ, or 未来, the kanji for "mirai"); romaji spellings are caught too. Either word is enough.
-const WAKE = /k[ou]n+[iy]?c?h?[iy]w?[ae]|mir[ae][iy]|こんにち|ミライ|みらい|未来/;
-const heardWakePhrase = (text) => WAKE.test((text || '').toLowerCase().replace(/[^a-z぀-ヿ未来]/g, ''));
+// While the welcome screen shows, MIRAI listens for "Halo MIRAI". The name alone is enough (Whisper
+// may write Mirae or Miray); "halo" alone is not, since people greet each other in the lobby.
+const WAKE = /mir[ae][iey]|h[ae]l+o+mira/;
+const heardWakePhrase = (text) => WAKE.test((text || '').toLowerCase().replace(/[^a-z]/g, ''));
 let wakeListening = false;
 
 async function checkWake(blob) {
   try {
     const form = new FormData();
     form.append('audio', blob, blob.type.includes('ogg') ? 'speech.ogg' : 'speech.webm');
-    form.append('wake', '1');  // The server transcribes this as Japanese: こんにちは ミライ.
+    form.append('wake', '1');  // Keep low-confidence text: "MIRAI" isn't an Indonesian word.
     const transcript = await (await api('/api/transcribe', { method: 'POST', body: form })).json();
     if (!$('#welcome').hidden && heardWakePhrase(transcript.text)) offerHelp('voiceGreeting');
   } catch (error) {
@@ -498,7 +498,7 @@ function startVisit(language, greeting = 'greeting', handsFree = false) {
   return Promise.resolve();
 }
 
-// Started without a tap (the robot reached a visitor, or someone said "Konnichiwa MIRAI"): say
+// Started without a tap (the robot reached a visitor, or someone said "Halo MIRAI"): say
 // hello, then listen hands-free, since the touchscreen may not work.
 async function offerHelp(greeting = 'offerHelp') {
   await startVisit(state.language, greeting, true);

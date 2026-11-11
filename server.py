@@ -207,7 +207,7 @@ def create_app(arguments, preload=True) -> FastAPI:
         path.write_bytes(data)
         try:
             kiosk.touch()
-            text, detected = kiosk.speech.transcribe(path, 'ja' if wake else None if language == 'auto' else language, strict=not wake)
+            text, detected = kiosk.speech.transcribe(path, 'id' if wake else None if language == 'auto' else language, strict=not wake)
             return {'text': text, 'language': detected if language == 'auto' else language}
         except ValueError as error:  # Silence or unintelligible audio, not a server fault.
             return {'text': '', 'language': language, 'error': str(error)}
