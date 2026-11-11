@@ -407,24 +407,37 @@ const WAKE = /k[ou]n+[iy]?c?h?[iy]w?[ae]|mir[ae][iy]|こんにち|ミライ|み�
 const heardWakePhrase = (text) => WAKE.test((text || '').toLowerCase().replace(/[^a-z぀-ヿ未来]/g, ''));
 let wakeListening = false;
 
+async function checkWake(blob) {
+  try {
+    const form = new FormData();
+    form.append('audio', blob, blob.type.includes('ogg') ? 'speech.ogg' : 'speech.webm');
+    form.append('wake', '1');  // The server transcribes this as Japanese: こんにちは ミライ.
+    const transcript = await (await api('/api/transcribe', { method: 'POST', body: form })).json();
+    if (!$('#welcome').hidden && heardWakePhrase(transcript.text)) offerHelp('voiceGreeting');
+  } catch (error) {
+    console.warn('Wake check failed:', error);  // Server not ready yet; try again shortly.
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+}
+
 async function listenForWake() {
   if (wakeListening || !state.voice) return;
   wakeListening = true;
+  let checking = null;
   try {
     while (!$('#welcome').hidden) {
       try {
         // The phrase takes ~2 s. Longer talk is passers-by chatting: skip it, or Whisper (on the CPU)
-        // would run nonstop, slowing every answer and missing the phrase while it is busy.
-        const result = await recorder.record({ maxSpeechMs: 3500 });
+        // would run nonstop and slow every answer. A short pause (700 ms) ends the clip sooner.
+        const result = await recorder.record({ maxSpeechMs: 3500, silenceMs: 700 });
         if ($('#welcome').hidden) break;  // Someone touched the screen meanwhile.
         if (!result?.heardSpeech || result.tooLong) continue;
-        const form = new FormData();
-        form.append('audio', result.blob, result.blob.type.includes('ogg') ? 'speech.ogg' : 'speech.webm');
-        form.append('wake', '1');  // The server transcribes this as Japanese: こんにちは ミライ.
-        const transcript = await (await api('/api/transcribe', { method: 'POST', body: form })).json();
-        if (!$('#welcome').hidden && heardWakePhrase(transcript.text)) offerHelp('voiceGreeting');
+        // Keep recording while Whisper works, so a phrase said meanwhile isn't missed;
+        // at most one clip waits for Whisper at a time.
+        await checking;
+        checking = checkWake(result.blob);
       } catch (error) {
-        console.warn('Wake listening paused:', error);  // Mic or server not ready yet; try again shortly.
+        console.warn('Wake listening paused:', error);  // Mic not ready yet; try again shortly.
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }

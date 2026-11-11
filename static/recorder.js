@@ -38,7 +38,7 @@ class TapToTalkRecorder {
 
   // Resolves with { blob, heardSpeech, tooLong }. Call stop() to finish early (second tap).
   // maxSpeechMs cuts off talk longer than that (tooLong: true), e.g. chatter while waiting for a wake phrase.
-  async record({ maxSpeechMs = Infinity } = {}) {
+  async record({ maxSpeechMs = Infinity, silenceMs = this.silenceMs } = {}) {
     await this.open();
     if (this.context.state === 'suspended') await this.context.resume();
     const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm']
@@ -69,7 +69,7 @@ class TapToTalkRecorder {
           const threshold = Math.max(0.015, noiseFloor * 2.5);
           if (rms > threshold) { if (!heardSpeech) firstSpeech = now; heardSpeech = true; lastSpeech = now; }
           this.onLevel(Math.min(1, rms / (threshold * 3)));
-          if ((heardSpeech && now - lastSpeech > this.silenceMs)
+          if ((heardSpeech && now - lastSpeech > silenceMs)
               || (!heardSpeech && now - started > this.noSpeechMs)
               || now - started > this.maxMs) return finish();
           if (heardSpeech && now - firstSpeech > maxSpeechMs) { tooLong = true; return finish(); }
