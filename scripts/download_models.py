@@ -37,16 +37,27 @@ def download_voices(destination: Path):
         print('Verified Piper voice:', name, flush=True)
 
 
+def download_whisper(model, models_dir):
+    from huggingface_hub import snapshot_download
+    repo, revision = WHISPER[model]
+    snapshot_download(repo, revision=revision, local_dir=models_dir / 'whisper' / model, max_workers=2,
+                      allow_patterns=['config.json', 'model.bin', 'tokenizer.json', 'vocabulary.json', 'vocabulary.txt', 'preprocessor_config.json'])
+    print(f'faster-whisper {model} downloaded.', flush=True)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skip-ollama', action='store_true')
     parser.add_argument('--text-only', action='store_true')
     parser.add_argument('--onnx-only', action='store_true', help='Download only the smaller semantic-search assets.')
+    parser.add_argument('--whisper-only', action='store_true', help='Download only the --whisper-model.')
     parser.add_argument('--model', default=BASE_MODEL)
     parser.add_argument('--embedding-model', default=Settings().embedding_model)
     parser.add_argument('--whisper-model', choices=sorted(WHISPER), default='small')
     parser.add_argument('--models-dir', type=Path, default=ROOT / 'models')
     args = parser.parse_args(argv)
+    if args.whisper_only:
+        return download_whisper(args.whisper_model, args.models_dir)
     from embeddings import cached_asset, model_spec, onnx_files
     embed_repo, embed_revision = args.embedding_model, model_spec(args.embedding_model)['revision']
     for filename in onnx_files(embed_repo):
@@ -59,11 +70,7 @@ def main(argv=None):
                       allow_patterns=['*.json', '*.safetensors', '*.txt', '*.model'], max_workers=2)
     print('Multilingual embedding model cached.', flush=True)
     if not args.text_only:
-        repo, revision = WHISPER[args.whisper_model]
-        snapshot_download(repo, revision=revision,
-                          local_dir=args.models_dir / 'whisper' / args.whisper_model, max_workers=2,
-                          allow_patterns=['config.json', 'model.bin', 'tokenizer.json', 'vocabulary.json', 'vocabulary.txt', 'preprocessor_config.json'])
-        print(f'faster-whisper {args.whisper_model} downloaded.', flush=True)
+        download_whisper(args.whisper_model, args.models_dir)
         download_voices(args.models_dir / 'voices')
     if not args.skip_ollama:
         from pull_model import pull

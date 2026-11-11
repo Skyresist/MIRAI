@@ -99,6 +99,7 @@ class Kiosk:
             if self.voice:
                 speech = self.speech
                 speech.load_whisper()
+                speech.load_wake_whisper()
                 for language in ('id', 'en'):
                     speech.load_voice(language)
         except Exception as error:  # Text chat must still work without voice models.

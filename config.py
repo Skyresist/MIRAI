@@ -35,6 +35,8 @@ class Settings:
     session: str = 'default'
     # small: 20% word errors vs base's 38% on the kiosk recordings, ~4.8 s per clip with beam 1 on 6 cores.
     whisper_model: str = 'small'
+    # The wake phrase ("Halo MIRAI") is two easy words: base hears them about twice as fast as small.
+    wake_whisper_model: str = 'base'
     speech_device: str = 'cpu'
     whisper_beam: int = 1  # 5 is about twice as slow; compare with scripts/eval_stt.py --beam.
     whisper_threads: int = 6

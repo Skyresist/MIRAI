@@ -31,6 +31,11 @@ fi
 # Only downloads what is missing (e.g. the ~135 MB e5-small ONNX model after the first update).
 # The kiosk uses quantised ONNX embeddings; Whisper and Piper voices came with install_jetson.sh.
 .venv/bin/python scripts/download_models.py --onnx-only
+# The faster Whisper model that listens for "Halo MIRAI" (~145 MB, once).
+wake_model="$(.venv/bin/python -c 'from config import Settings; print(Settings().wake_whisper_model)')"
+if [[ ! -f "models/whisper/$wake_model/model.bin" ]]; then
+    .venv/bin/python scripts/download_models.py --whisper-only --whisper-model "$wake_model"
+fi
 model="$(.venv/bin/python -c 'from config import BASE_MODEL; print(BASE_MODEL)')"
 if ! ollama list | grep -q "$model"; then
     .venv/bin/python scripts/pull_model.py --model "$model"

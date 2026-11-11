@@ -40,7 +40,7 @@ fi
 timeout -s INT 4 parecord --device="$respeaker" --channels=1 --rate=16000 --file-format=wav "$clip"
 echo 'done recording, asking Whisper ...'
 .venv/bin/python - "$clip" <<'EOF'
-import re, sys, wave, array
+import array, re, sys, time, wave
 from config import Settings
 from glossary import Glossary
 from speech import Speech
@@ -50,11 +50,14 @@ with wave.open(sys.argv[1]) as clip:
 peak = max(map(abs, samples), default=0)
 print(f'loudest sound: {peak} of 32767', '(too quiet: speak closer or raise the mic volume)' if peak < 2000 else '(ok)')
 settings = Settings()
+speech = Speech(settings, Glossary(settings.glossary_path))
+speech.load_wake_whisper()  # Loading happens once at kiosk start; time only the listening.
+started = time.perf_counter()
 try:
-    text, _ = Speech(settings, Glossary(settings.glossary_path)).transcribe(sys.argv[1], 'id', strict=False)
+    text, _ = speech.transcribe(sys.argv[1], 'id', strict=False)
 except ValueError:
     text = ''
-print(f'Whisper heard: {text!r}')
+print(f'Whisper heard: {text!r} in {time.perf_counter() - started:.1f} s')
 # Same check as WAKE in static/app.js.
 woke = re.search(r'mir[ae][iey]|h[ae]l+o+mira', re.sub('[^a-z]', '', text.lower()))
 print('WAKE PHRASE MATCHED' if woke else 'wake phrase NOT matched')

@@ -117,9 +117,11 @@ def test_the_wake_phrase_survives_a_low_confidence_score():
     from glossary import Glossary
     segment = SimpleNamespace(text='Halo Mirai.', no_speech_prob=0.1, avg_logprob=-2.4)
     talker = Speech(SimpleNamespace(whisper_beam=1, min_confidence=-1.5), Glossary())
-    talker.whisper = Mock(transcribe=Mock(return_value=([segment], SimpleNamespace(language='id'))))
+    talker.whisper = Mock()
+    talker.wake_whisper = Mock(transcribe=Mock(return_value=([segment], SimpleNamespace(language='id'))))
     assert 'mirai' in talker.transcribe(Path(__file__), 'id', strict=False)[0].lower()
-    assert talker.whisper.transcribe.call_args.kwargs['initial_prompt'] is None
+    assert talker.wake_whisper.transcribe.call_args.kwargs['initial_prompt'] is None
+    assert not talker.whisper.transcribe.called, 'the wake phrase uses the faster model'
 
 
 def test_whisper_loops_are_collapsed():

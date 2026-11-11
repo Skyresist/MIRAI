@@ -70,6 +70,7 @@ class Speech:
     def __init__(self, settings: Settings, glossary: Glossary):
         self.settings, self.glossary = settings, glossary
         self.whisper = None
+        self.wake_whisper = None
         self.voices = {}
 
     @staticmethod
@@ -86,22 +87,32 @@ class Speech:
             detail = result.stderr.strip()[:400] or f'exit status {result.returncode}'
             raise RuntimeError(f'{Path(player).name} playback failed: {detail}. Check the selected output in Ubuntu Sound settings.')
 
+    def open_whisper(self, model: str):
+        import ctranslate2
+        from faster_whisper import WhisperModel
+        device = self.settings.speech_device
+        if device == 'auto':
+            device = 'cuda' if ctranslate2.get_cuda_device_count() > 0 else 'cpu'
+        local = self.settings.voices_dir.parent / 'whisper' / model
+        if (local / 'model.bin').exists():
+            model = str(local)
+        return WhisperModel(
+            model, device=device, compute_type='float16' if device == 'cuda' else 'int8',
+            cpu_threads=self.settings.whisper_threads, num_workers=1,
+        )
+
     def load_whisper(self):
         if self.whisper is None:
-            import ctranslate2
-            from faster_whisper import WhisperModel
-            device = self.settings.speech_device
-            if device == 'auto':
-                device = 'cuda' if ctranslate2.get_cuda_device_count() > 0 else 'cpu'
-            model = self.settings.whisper_model
-            local = self.settings.voices_dir.parent / 'whisper' / model
-            if (local / 'model.bin').exists():
-                model = str(local)
-            self.whisper = WhisperModel(
-                model, device=device, compute_type='float16' if device == 'cuda' else 'int8',
-                cpu_threads=self.settings.whisper_threads, num_workers=1,
-            )
+            self.whisper = self.open_whisper(self.settings.whisper_model)
         return self.whisper
+
+    def load_wake_whisper(self):
+        if self.wake_whisper is None:
+            model = self.settings.wake_whisper_model
+            downloaded = (self.settings.voices_dir.parent / 'whisper' / model / 'model.bin').exists()
+            # Not downloaded yet (update_jetson.sh fetches it): the main model still works, just slower.
+            self.wake_whisper = self.open_whisper(model) if downloaded else self.load_whisper()
+        return self.wake_whisper
 
     def load_voice(self, language: str):
         if language not in VOICES:
@@ -117,7 +128,7 @@ class Speech:
     def transcribe(self, audio_path: Path, language: str | None = None, strict: bool = True) -> tuple[str, str]:
         if not Path(audio_path).is_file():
             raise FileNotFoundError(f'Audio file not found: {audio_path}')
-        segments, info = self.load_whisper().transcribe(
+        segments, info = (self.load_whisper() if strict else self.load_wake_whisper()).transcribe(
             str(audio_path), language=language, beam_size=self.settings.whisper_beam, temperature=0.0,
             vad_filter=True, vad_parameters={'min_silence_duration_ms': 300},
             condition_on_previous_text=False,
