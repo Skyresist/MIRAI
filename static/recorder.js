@@ -50,12 +50,14 @@ class TapToTalkRecorder {
     return new Promise((resolve, reject) => {
       const started = performance.now();
       let noiseFloor = 0, calibrationFrames = 0, heardSpeech = false, firstSpeech = 0, lastSpeech = started, cancelled = false, tooLong = false;
+      let frame;
       const finish = () => recorder.state !== 'inactive' && recorder.stop();
       recorder.onerror = (event) => reject(event.error || new Error('Recording failed'));
       recorder.onstop = () => {
-        cancelAnimationFrame(this.frame);
-        this.active = null;
-        this.onLevel(0);
+        // Stopping finishes a moment later; by then a new recording may have started (a visit ended
+        // and wake listening resumed). Only clean up this one, or the new one would never end.
+        cancelAnimationFrame(frame);
+        if (this.active === handle) { this.active = null; this.onLevel(0); }
         if (cancelled) return resolve(null);
         resolve({ blob: new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }), heardSpeech, tooLong });
       };
@@ -74,10 +76,11 @@ class TapToTalkRecorder {
               || now - started > this.maxMs) return finish();
           if (heardSpeech && now - firstSpeech > maxSpeechMs) { tooLong = true; return finish(); }
         }
-        this.frame = requestAnimationFrame(tick);
+        frame = requestAnimationFrame(tick);
       };
 
-      this.active = { stop: finish, cancel: () => { cancelled = true; finish(); } };
+      const handle = { stop: finish, cancel: () => { cancelled = true; finish(); } };
+      this.active = handle;
       recorder.start(250);
       tick();
     });
