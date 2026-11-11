@@ -250,7 +250,6 @@ def main(argv=None):
     arguments = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO if arguments.verbose else logging.WARNING,
                         format='%(levelname)s: %(message)s')
-    logging.getLogger('mirai.speech').setLevel(logging.INFO)  # 'Heard ...' lines in kiosk.log show what MIRAI heard.
     uvicorn.run(create_app(arguments), host=arguments.host, port=arguments.port, log_level='warning')
 
 
