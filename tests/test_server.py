@@ -80,6 +80,12 @@ def test_transcribe_passes_screen_language_and_cleans_up(client):
     assert response.json() == {'text': 'Apa saja UKM?', 'language': 'id'}
     path, language = client.speech.transcribe.call_args.args
     assert language == 'id' and not path.exists()
+    assert client.speech.transcribe.call_args.kwargs == {'strict': True}
+
+
+def test_wake_listening_keeps_low_confidence_text(client):
+    client.post('/api/transcribe', files={'audio': ('speech.webm', b'x', 'audio/webm')}, data={'language': 'id', 'wake': '1'})
+    assert client.speech.transcribe.call_args.kwargs == {'strict': False}
 
 
 def test_silence_is_not_a_server_error(client):

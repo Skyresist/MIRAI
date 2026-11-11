@@ -194,7 +194,7 @@ def create_app(arguments, preload=True) -> FastAPI:
         return {'ok': True}
 
     @api.post('/api/transcribe')
-    def transcribe(audio: UploadFile = File(...), language: str = Form('auto')):
+    def transcribe(audio: UploadFile = File(...), language: str = Form('auto'), wake: bool = Form(False)):
         if language not in ('auto', 'id', 'en'):
             raise HTTPException(400, 'language must be auto, id or en')
         data = audio.file.read(MAX_AUDIO_BYTES + 1)
@@ -207,7 +207,7 @@ def create_app(arguments, preload=True) -> FastAPI:
         path.write_bytes(data)
         try:
             kiosk.touch()
-            text, detected = kiosk.speech.transcribe(path, None if language == 'auto' else language)
+            text, detected = kiosk.speech.transcribe(path, None if language == 'auto' else language, strict=not wake)
             return {'text': text, 'language': detected if language == 'auto' else language}
         except ValueError as error:  # Silence or unintelligible audio, not a server fault.
             return {'text': '', 'language': language, 'error': str(error)}

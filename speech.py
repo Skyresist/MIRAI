@@ -114,7 +114,7 @@ class Speech:
             self.voices[language] = PiperVoice.load(str(model), use_cuda=False)
         return self.voices[language]
 
-    def transcribe(self, audio_path: Path, language: str | None = None) -> tuple[str, str]:
+    def transcribe(self, audio_path: Path, language: str | None = None, strict: bool = True) -> tuple[str, str]:
         if not Path(audio_path).is_file():
             raise FileNotFoundError(f'Audio file not found: {audio_path}')
         segments, info = self.load_whisper().transcribe(
@@ -127,11 +127,12 @@ class Speech:
         text = ' '.join(segment.text.strip() for segment in segments).strip()
         confidence = sum(segment.avg_logprob for segment in segments) / len(segments) if segments else 0.0
         logger.info('Heard %r (confidence %.2f)', text, confidence)
-        # Asking to repeat beats answering a question the visitor never asked.
-        if confidence < self.settings.min_confidence:
+        # Asking to repeat beats answering a question the visitor never asked. Not for the wake phrase:
+        # Japanese heard as Indonesian always scores low, and the screen's regex filters it instead.
+        if strict and confidence < self.settings.min_confidence:
             text = ''
         # On unclear audio Whisper may just copy its hint sentence; that is not the visitor's question.
-        if SequenceMatcher(None, text.casefold(), self.glossary.initial_prompt.casefold()).ratio() > 0.6:
+        if strict and SequenceMatcher(None, text.casefold(), self.glossary.initial_prompt.casefold()).ratio() > 0.6:
             text = ''
         if not text:
             raise ValueError('No speech detected; try a clearer recording or --language id/en.')

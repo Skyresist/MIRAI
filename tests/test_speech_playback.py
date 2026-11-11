@@ -113,6 +113,14 @@ def test_only_a_far_off_transcript_asks_the_visitor_to_repeat(confidence, kept):
             talker.transcribe(Path(__file__), 'id')
 
 
+def test_the_wake_phrase_survives_a_low_confidence_score():
+    from glossary import Glossary
+    segment = SimpleNamespace(text='Konnichiwa Mirai', no_speech_prob=0.1, avg_logprob=-2.4)
+    talker = Speech(SimpleNamespace(whisper_beam=1, min_confidence=-1.5), Glossary())
+    talker.whisper = Mock(transcribe=Mock(return_value=([segment], SimpleNamespace(language='id'))))
+    assert 'konnichiwa' in talker.transcribe(Path(__file__), 'id', strict=False)[0].lower()
+
+
 def test_whisper_loops_are_collapsed():
     assert speech.collapse_repeats('Ada UKM apa saja? BINUS ASO, BASE BASE BASE') == 'Ada UKM apa saja? BINUS ASO, BASE'
     assert speech.collapse_repeats('BINUS ASO, BINUS ASO, BINUS ASO.') == 'BINUS ASO,'

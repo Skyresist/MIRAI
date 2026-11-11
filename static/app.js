@@ -6,7 +6,7 @@ const TEXT = {
     finish: 'Selesai', send: 'Kirim', cancel: '✕ Batal', placeholder: 'Ketik pertanyaan…', talk: 'Mulai bertanya', type: 'Ketik',
     stopTalking: 'Selesai bicara', topics: 'Topik populer', close: 'Tutup', typeLabel: 'Ketik pertanyaanmu',
     touchStart: 'Sentuh layar atau sapa "Konnichiwa MIRAI"',
-    voiceGreeting: 'Konnichiwa! Aku MIRAI. Silakan tanya apa saja tentang BINUS ASO, aku mendengarkan.',
+    voiceGreeting: 'Konnichiwa!',
     welcome: 'Halo! Aku MIRAI, siap membantu mencari informasi tentang BINUS ASO.',
     stillThere: 'Masih di sana? Sentuh layar untuk melanjutkan.',
     greeting: 'Halo! Aku bisa membantu mencari informasi tentang BINUS ASO. Tekan Mulai Bertanya, ketik, atau pilih Topik Populer.',
@@ -24,7 +24,7 @@ const TEXT = {
     finish: 'Finish', send: 'Send', cancel: '✕ Cancel', placeholder: 'Type a question…', talk: 'Start asking', type: 'Type',
     stopTalking: 'Done talking', topics: 'Popular topics', close: 'Close', typeLabel: 'Type your question',
     touchStart: 'Touch the screen or say "Konnichiwa MIRAI"',
-    voiceGreeting: "Konnichiwa! I'm MIRAI. Ask me anything about BINUS ASO, I'm listening.",
+    voiceGreeting: 'Konnichiwa!',
     welcome: "Hi! I'm MIRAI, here to help you find information about BINUS ASO.",
     stillThere: 'Still there? Touch the screen to continue.',
     greeting: 'Hi! I can help you find information about BINUS ASO. Tap Start Asking, type, or pick a Popular Topic.',
@@ -418,6 +418,7 @@ async function listenForWake() {
         if (!result?.heardSpeech) continue;
         const form = new FormData();
         form.append('audio', result.blob, result.blob.type.includes('ogg') ? 'speech.ogg' : 'speech.webm');
+        form.append('wake', '1');  // Keep low-confidence text: the wake phrase isn't Indonesian.
         form.append('language', 'id');  // Auto-detect may hear Japanese and answer in kana; id keeps romaji.
         const transcript = await (await api('/api/transcribe', { method: 'POST', body: form })).json();
         if (!$('#welcome').hidden && heardWakePhrase(transcript.text)) offerHelp('voiceGreeting');
